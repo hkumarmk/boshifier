@@ -34,7 +34,7 @@ resource_types:
     repository: cloudfoundry/bosh-deployment-resource
 
 jobs:
-- name: deploy
+- name: ((deployment))-deploy
   plan:
   - aggregate:
     - get: bosh-release-get

@@ -97,6 +97,9 @@ Deployment done
 
 ```
 
+# Sample pipeline screenshot
+![Sample Pipeline](images/pipeline.png)
+
 # TODO
 * multi-release, multi-stemcell deployments
 * Way to add bosh directors
