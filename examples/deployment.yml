@@ -25,16 +25,19 @@ name: redis
 # 3. Pull a release tarball
 # release:
 #   repo: cloudfoundry-community/redis-boshrelease
-#   release_tarball: true
 #   boshio_release: true
+#   params:
+#     tarball: true
 #
-release:
-  #
-  repo: "https://github.com/hkumarmk/redis-boshrelease.git"
-  branch: master
+#
+releases:
+  redis:
+    repo: "https://github.com/hkumarmk/redis-boshrelease.git"
+    branch: master
 # deployment manifest repo.
 manifest:
   repo: "https://github.com/hkumarmk/redis-boshrelease.git"
   # Path to deployment manifest within manifest repo default to manifest.yml
   path: manifests/redis.yml
-stemcell: bosh-warden-boshlite-ubuntu-trusty-go_agent
+stemcells:
+  - bosh-warden-boshlite-ubuntu-trusty-go_agent

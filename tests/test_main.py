@@ -21,11 +21,20 @@ import main
 
 
 deployment_config = {
-    'bosh_release_repo': 'concourse/concourse',
-    'deployment_manifest_repo': 'https://github.com/hkumarmk/redis-boshrelease.git',
-    'deployment_manifest_path': 'manifests/redis.yml',
-    'deployment': 'redis',
-    'stemcell': 'bosh-warden-boshlite-ubuntu-trusty-go_agent'
+    "name": "test_name",
+    "releases": {
+      "foo": {
+        "repo": "foo_release_repo",
+        "branch": "master"
+      }
+    },
+    "manifest": {
+      "repo": "manifest_repo",
+      "path": "manifests/test_manifest.yml"
+    },
+    "stemcells": [
+        "bosh-warden-boshlite-ubuntu-trusty-go_agent"
+    ]
 }
 
 
@@ -93,46 +102,29 @@ class BoshifierTests(unittest.TestCase):
                     'name': 'bosh-deployment'
                 }],
                 'jobs': [{
-                    'name': '((deployment))-deploy',
+                    'name': '((deployment_name))-deploy',
                     'plan': [{
                         'aggregate': [{
-                            'get': 'bosh-release-get'
-                        }, {
-                            'get': 'stemcell'
+                            'get': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
                         }, {
                             'get': 'bosh-deployment-manifest'
+                        }, {
+                            'get': 'stemcell-bosh-warden-boshlite-ubuntu-xenial-go_agent'
+                        }, {
+                            'get': 'bosh-deployment-manifest'
+                        }, {
+                            'get': 'bosh-release-get-foo'
+                        }, {
+                            'get': 'bosh-release-get-bar'
                         }]
                     }, {
-                        'task': 'create-release',
-                        'config': {
-                            'platform': 'linux',
-                            'inputs': [{
-                                'name': 'bosh-release-get'
-                            }, {
-                                'name': 'bosh-deployment-manifest'
-                            }],
-                            'run': {
-                                'path': 'bosh',
-                                'args': ['create-release', '--final', '--tarball=../releases/release.tgz'],
-                                'dir': 'bosh-release-get'
-                            },
-                            'outputs': [{
-                                'path': '',
-                                'name': 'releases'
-                            }],
-                            'image_resource': {
-                                'source': {
-                                    'repository': 'hkumar/bosh-cli-v2'
-                                },
-                                'type': 'docker-image'
-                            }
-                        }
+                        'aggregate': None
                     }, {
                         'put': 'bosh-deployment',
                         'params': {
-                            'stemcells': ['stemcell/*.tgz'],
-                            'releases': ['releases/*.tgz'],
-                            'manifest': 'bosh-deployment-manifest/((deployment_manifest_path))'
+                            'stemcells': ['stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz', 'stemcell-bosh-warden-boshlite-ubuntu-xenial-go_agent/*.tgz'],
+                            'releases': ['bosh-release-get-foo/*.tgz', 'bosh-release-get-bar/*.tgz'],
+                            'manifest': 'bosh-deployment-manifest/manifests/test_manifest.yml'
                         }
                     }]
                 }],
@@ -142,26 +134,123 @@ class BoshifierTests(unittest.TestCase):
                         'client': '((director_username))',
                         'target': '((director_address))',
                         'ca_cert': '((director_ca_cert))',
-                        'deployment': '((deployment))'
+                        'deployment': '((deployment_name))'
                     },
                     'type': 'bosh-deployment',
                     'name': 'bosh-deployment'
                 }, {
                     'source': {
-                        'uri': '((bosh_release_repo))',
+                        'repository': 'foo_release_repo'
+                    },
+                    'type': 'bosh-io-release',
+                    'name': 'bosh-release-get-foo'
+                }, {
+                    'source': {
+                        'repository': 'repo_bar'
+                    },
+                    'type': 'bosh-io-release',
+                    'name': 'bosh-release-get-bar'
+                }, {
+                    'source': {
+                        'name': 'bosh-warden-boshlite-ubuntu-trusty-go_agent'
+                    },
+                    'type': 'bosh-io-stemcell',
+                    'name': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
+                }, {
+                    'source': {
+                        'name': 'bosh-warden-boshlite-ubuntu-xenial-go_agent'
+                    },
+                    'type': 'bosh-io-stemcell',
+                    'name': 'stemcell-bosh-warden-boshlite-ubuntu-xenial-go_agent'
+                }, {
+                    'source': {
+                        'uri': 'manifest_repo',
                         'branch': 'master'
                     },
                     'type': 'git',
-                    'name': 'bosh-release-get'
+                    'name': 'bosh-deployment-manifest'
+                }]
+            }
+        )
+
+    def test_render_j2_multi_release(self):
+        deployment_config_multi = deployment_config.copy()
+        deployment_config_multi['releases'].update({'bar': {"repo": "repo_bar", "boshio_release": True}})
+        deployment_config_multi['stemcells'].append('bosh-warden-boshlite-ubuntu-xenial-go_agent')
+        self.assertEqual(
+            main.render_j2(variables=deployment_config_multi),
+            {
+                'resource_types': [{
+                    'source': {
+                        'repository': 'cloudfoundry/bosh-deployment-resource'
+                    },
+                    'type': 'docker-image',
+                    'name': 'bosh-deployment'
+                }],
+                'jobs': [{
+                    'name': '((deployment_name))-deploy',
+                    'plan': [{
+                        'aggregate': [{
+                            'get': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
+                        }, {
+                            'get': 'bosh-deployment-manifest'
+                        }, {
+                            'get': 'stemcell-bosh-warden-boshlite-ubuntu-xenial-go_agent'
+                        }, {
+                            'get': 'bosh-deployment-manifest'
+                        }, {
+                            'get': 'bosh-release-get-foo'
+                        }, {
+                            'get': 'bosh-release-get-bar'
+                        }]
+                    }, {
+                        'aggregate': None
+                    }, {
+                        'put': 'bosh-deployment',
+                        'params': {
+                            'stemcells': ['stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz', 'stemcell-bosh-warden-boshlite-ubuntu-xenial-go_agent/*.tgz'],
+                            'releases': ['bosh-release-get-foo/*.tgz', 'bosh-release-get-bar/*.tgz'],
+                            'manifest': 'bosh-deployment-manifest/manifests/test_manifest.yml'
+                        }
+                    }]
+                }],
+                'resources': [{
+                    'source': {
+                        'client_secret': '((director_password))',
+                        'client': '((director_username))',
+                        'target': '((director_address))',
+                        'ca_cert': '((director_ca_cert))',
+                        'deployment': '((deployment_name))'
+                    },
+                    'type': 'bosh-deployment',
+                    'name': 'bosh-deployment'
                 }, {
                     'source': {
-                        'name': '((stemcell))'
+                        'repository': 'foo_release_repo'
+                    },
+                    'type': 'bosh-io-release',
+                    'name': 'bosh-release-get-foo'
+                }, {
+                    'source': {
+                        'repository': 'repo_bar'
+                    },
+                    'type': 'bosh-io-release',
+                    'name': 'bosh-release-get-bar'
+                }, {
+                    'source': {
+                        'name': 'bosh-warden-boshlite-ubuntu-trusty-go_agent'
                     },
                     'type': 'bosh-io-stemcell',
-                    'name': 'stemcell'
+                    'name': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
                 }, {
                     'source': {
-                        'uri': '((deployment_manifest_repo))',
+                        'name': 'bosh-warden-boshlite-ubuntu-xenial-go_agent'
+                    },
+                    'type': 'bosh-io-stemcell',
+                    'name': 'stemcell-bosh-warden-boshlite-ubuntu-xenial-go_agent'
+                }, {
+                    'source': {
+                        'uri': 'manifest_repo',
                         'branch': 'master'
                     },
                     'type': 'git',
@@ -172,10 +261,11 @@ class BoshifierTests(unittest.TestCase):
 
     def test_render_j2_bosh_release(self):
         deployment_config_bosh = deployment_config.copy()
-        deployment_config_bosh.update({"boshio_release": True})
+        deployment_config_bosh['releases']['foo'].update({"boshio_release": True})
+        del deployment_config_bosh['releases']['foo']['branch']
 
         self.assertEqual(
-            main.render_j2(variables=deployment_config),
+            main.render_j2(variables=deployment_config_bosh),
             {
                 'resource_types': [{
                     'source': {
@@ -185,46 +275,23 @@ class BoshifierTests(unittest.TestCase):
                     'name': 'bosh-deployment'
                 }],
                 'jobs': [{
-                    'name': '((deployment))-deploy',
+                    'name': '((deployment_name))-deploy',
                     'plan': [{
                         'aggregate': [{
-                            'get': 'bosh-release-get'
-                        }, {
-                            'get': 'stemcell'
+                            'get': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
                         }, {
                             'get': 'bosh-deployment-manifest'
+                        }, {
+                            'get': 'bosh-release-get-foo'
                         }]
                     }, {
-                        'task': 'create-release',
-                        'config': {
-                            'platform': 'linux',
-                            'inputs': [{
-                                'name': 'bosh-release-get'
-                            }, {
-                                'name': 'bosh-deployment-manifest'
-                            }],
-                            'run': {
-                                'path': 'bosh',
-                                'args': ['create-release', '--final', '--tarball=../releases/release.tgz'],
-                                'dir': 'bosh-release-get'
-                            },
-                            'outputs': [{
-                                'path': '',
-                                'name': 'releases'
-                            }],
-                            'image_resource': {
-                                'source': {
-                                    'repository': 'hkumar/bosh-cli-v2'
-                                },
-                                'type': 'docker-image'
-                            }
-                        }
+                        'aggregate': None
                     }, {
                         'put': 'bosh-deployment',
                         'params': {
-                            'stemcells': ['stemcell/*.tgz'],
-                            'releases': ['releases/*.tgz'],
-                            'manifest': 'bosh-deployment-manifest/((deployment_manifest_path))'
+                            'stemcells': ['stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz'],
+                            'releases': ['bosh-release-get-foo/*.tgz'],
+                            'manifest': 'bosh-deployment-manifest/manifests/test_manifest.yml'
                         }
                     }]
                 }],
@@ -234,26 +301,25 @@ class BoshifierTests(unittest.TestCase):
                         'client': '((director_username))',
                         'target': '((director_address))',
                         'ca_cert': '((director_ca_cert))',
-                        'deployment': '((deployment))'
+                        'deployment': '((deployment_name))'
                     },
                     'type': 'bosh-deployment',
                     'name': 'bosh-deployment'
                 }, {
                     'source': {
-                        'uri': '((bosh_release_repo))',
-                        'branch': 'master'
+                        'repository': 'foo_release_repo'
                     },
-                    'type': 'git',
-                    'name': 'bosh-release-get'
+                    'type': 'bosh-io-release',
+                    'name': 'bosh-release-get-foo'
                 }, {
                     'source': {
-                        'name': '((stemcell))'
+                        'name': 'bosh-warden-boshlite-ubuntu-trusty-go_agent'
                     },
                     'type': 'bosh-io-stemcell',
-                    'name': 'stemcell'
+                    'name': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
                 }, {
                     'source': {
-                        'uri': '((deployment_manifest_repo))',
+                        'uri': 'manifest_repo',
                         'branch': 'master'
                     },
                     'type': 'git',
@@ -277,24 +343,23 @@ class BoshifierTests(unittest.TestCase):
                     'name': 'bosh-deployment'
                 }],
                 'jobs': [{
-                    'name': '((deployment))-deploy',
+                    'name': '((deployment_name))-deploy',
                     'plan': [{
                         'aggregate': [{
-                            'params': {
-                                'tarball': True
-                            },
-                            'get': 'bosh-release-get'
-                        }, {
-                            'get': 'stemcell'
+                            'get': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
                         }, {
                             'get': 'bosh-deployment-manifest'
+                        }, {
+                            'get': 'bosh-release-get-foo'
                         }]
+                    }, {
+                        'aggregate': None
                     }, {
                         'put': 'bosh-deployment',
                         'params': {
-                            'stemcells': ['stemcell/*.tgz'],
-                            'releases': ['releases/*.tgz'],
-                            'manifest': 'bosh-deployment-manifest/((deployment_manifest_path))'
+                            'stemcells': ['stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz'],
+                            'releases': ['bosh-release-get-foo/*.tgz'],
+                            'manifest': 'bosh-deployment-manifest/manifests/test_manifest.yml'
                         }
                     }]
                 }],
@@ -304,25 +369,25 @@ class BoshifierTests(unittest.TestCase):
                         'client': '((director_username))',
                         'target': '((director_address))',
                         'ca_cert': '((director_ca_cert))',
-                        'deployment': '((deployment))'
+                        'deployment': '((deployment_name))'
                     },
                     'type': 'bosh-deployment',
                     'name': 'bosh-deployment'
                 }, {
                     'source': {
-                        'repository': '((bosh_release_repo))'
+                        'repository': 'foo_release_repo'
                     },
                     'type': 'bosh-io-release',
-                    'name': 'bosh-release-get'
+                    'name': 'bosh-release-get-foo'
                 }, {
                     'source': {
-                        'name': '((stemcell))'
+                        'name': 'bosh-warden-boshlite-ubuntu-trusty-go_agent'
                     },
                     'type': 'bosh-io-stemcell',
-                    'name': 'stemcell'
+                    'name': 'stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent'
                 }, {
                     'source': {
-                        'uri': '((deployment_manifest_repo))',
+                        'uri': 'manifest_repo',
                         'branch': 'master'
                     },
                     'type': 'git',
@@ -336,32 +401,18 @@ class BoshifierTests(unittest.TestCase):
             main.read_yaml(open(os.path.join(
                 os.path.dirname(__file__), "samples", "deployment.yml"), "r")),
             {
-                "name": "test_name",
-                "release": {
-                    "repo": "release_repo",
-                    "branch": "master",
+                'stemcells': ['bosh-warden-boshlite-ubuntu-trusty-go_agent', 'bosh-warden-boshlite-ubuntu-xenial-go_agent'],
+                'name': 'test_name',
+                'releases': {
+                    'foo': {
+                        'repo': 'foo_release_repo',
+                        'branch': 'master'
+                    }
                 },
-                "manifest": {
-                    "repo": "manifest_repo",
-                    "path": "manifests/test_manifest.yml"
-                },
-                "stemcell": "bosh-warden-boshlite-ubuntu-trusty-go_agent"
-            }
-        )
-
-    def test_get_deployment_config(self):
-        self.assertEqual(
-            main.get_deployment_config(open(os.path.join(
-                os.path.dirname(__file__), "samples", "deployment.yml"), "r")),
-            {
-                "deployment": "test_name",
-                "bosh_release_repo": "release_repo",
-                "boshio_release": None,
-                "release_tarball": None,
-                "stemcell": "bosh-warden-boshlite-ubuntu-trusty-go_agent",
-                "deployment_manifest_repo": "manifest_repo",
-                "deployment_manifest_path": "manifests/test_manifest.yml",
-                "bosh_release_branch": "master"
+                'manifest': {
+                    'repo': 'manifest_repo',
+                    'path': 'manifests/test_manifest.yml'
+                }
             }
         )
 
@@ -453,7 +504,8 @@ class FlyerTests(unittest.TestCase):
         self.fly = main.Flyer(
             open(os.path.join(
                 os.path.dirname(__file__), "samples", "concourse.yml"), "r"),
-            'test_pipeline', "/tmp", deployment_config
+            '/tmp/',
+            deployment_config
         )
 
     @mock.patch('main.Flyer._fly_cmd')
@@ -476,7 +528,7 @@ class FlyerTests(unittest.TestCase):
             'set-pipeline',
             '--target', 'localhost',
             '--non-interactive',
-            '--pipeline', 'test_pipeline',
+            '--pipeline', 'test_name',
             '--config', '/tmp/.pipeline.yml',
             '--load-vars-from', '/tmp/vars.yml'
         )
@@ -487,5 +539,5 @@ class FlyerTests(unittest.TestCase):
         fly_cmd.assert_called_with(
             'unpause-pipeline',
             '--target', 'localhost',
-            '--pipeline', 'test_pipeline',
+            '--pipeline', 'test_name',
         )

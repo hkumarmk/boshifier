@@ -1,9 +1,12 @@
 ---
 name: test_name
-release:
-    repo: release_repo
+releases:
+  foo:
+    repo: foo_release_repo
     branch: master
 manifest:
   repo: manifest_repo
   path: manifests/test_manifest.yml
-stemcell: bosh-warden-boshlite-ubuntu-trusty-go_agent
+stemcells:
+  - bosh-warden-boshlite-ubuntu-trusty-go_agent
+  - bosh-warden-boshlite-ubuntu-xenial-go_agent

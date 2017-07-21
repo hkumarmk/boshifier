@@ -7,31 +7,36 @@ resources:
     target: ((director_address))
     client: ((director_username))
     client_secret: ((director_password))
-    deployment: ((deployment))
-{% if boshio_release %}
-- name: bosh-release-get
+    deployment: ((deployment_name))
+{% for release_name, release_config in releases.items() %}
+{% if release_config.get('boshio_release') %}
+
+- name: bosh-release-get-{{ release_name }}
   type: bosh-io-release
   source:
-    repository: ((bosh_release_repo))
+    repository: {{ release_config['repo'] }}
 {% else %}
-- name: bosh-release-get
+- name: bosh-release-get-{{ release_name }}
   type: git
   source:
-    uri: ((bosh_release_repo))
-    branch: &bosh_release_branch master
-{% endif %}
+    uri: {{ release_config['repo'] }}
+    branch: {{ release_config.get('branch', 'master') }}
 
-- name: stemcell
+{% endif %}
+{% endfor %}
+
+{% for stemcell_name in stemcells %}
+- name: stemcell-{{ stemcell_name }}
   type: bosh-io-stemcell
   source:
-    name: ((stemcell))
+    name: {{ stemcell_name }}
 
+{% endfor %}
 - name: bosh-deployment-manifest
   type: git
   source:
-    uri: ((deployment_manifest_repo))
-    branch: &deployment_manifest_branch master
-#    paths: ((deployment_manifest_path))
+    uri: {{ manifest['repo']  }}
+    branch: {{ manifest.get('branch', 'master') }}
 
 resource_types:
 - name: bosh-deployment
@@ -40,39 +45,55 @@ resource_types:
     repository: cloudfoundry/bosh-deployment-resource
 
 jobs:
-- name: ((deployment))-deploy
+- name: ((deployment_name))-deploy
   plan:
   - aggregate:
-    - get: bosh-release-get
-{% if boshio_release and release_tarball %}
-      params:
-        tarball: true
-{% endif %}
-    - get: stemcell
+{% for stemcell_name in stemcells %}
+    - get: stemcell-{{ stemcell_name }}
     - get: bosh-deployment-manifest
-{% if not boshio_release %}
-  - task: create-release
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: &bosh-cli-image-repo hkumar/bosh-cli-v2
-      inputs:
-      - name: bosh-release-get
-      - name: bosh-deployment-manifest
-      run:
-        path: bosh
-        args: [create-release, --final, --tarball=../releases/release.tgz]
-        dir: bosh-release-get
-      outputs:
-      - name: releases
-        path: ""
+{% endfor %}
+{% for release_name, release_config in releases.items() %}
+    - get: bosh-release-get-{{ release_name }}
+{% if release_config.get('params') %}
+      params:
+{% for param_name, param_value in release_config['params'].items() %}
+        {{ param_name }}: {{ param_value }}
+{% endfor %}
 {% endif %}
+{% endfor %}
+  - aggregate:
+{% for release_name, release_config in releases.items() %}
+{% if not release_config.get('boshio_release') %}
+    - task: create-release-{{ release_name }}
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: hkumar/bosh-cli-v2
+        inputs:
+        - name: bosh-release-get-{{ release_name }}
+        run:
+          path: bosh
+          args: [create-release, --final, --tarball=../bosh-release-{{ release_name }}/release.tgz]
+          dir: bosh-release-get-{{ release_name }}
+        outputs:
+        - name: bosh-release-{{ release_name }}
+          path: ""
+{% endif %}
+{% endfor %}
   - put: bosh-deployment
     params:
-      manifest: "bosh-deployment-manifest/((deployment_manifest_path))"
+      manifest: "bosh-deployment-manifest/{{ manifest.get('path', 'manifest.yml')}}"
       releases:
-      - releases/*.tgz
+{% for release_name, release_config in releases.items() %}
+{% if release_config.get('boshio_release') %}
+      - bosh-release-get-{{ release_name }}/*.tgz
+{% else %}
+      - bosh-release-{{ release_name }}/*.tgz
+{% endif %}
+{% endfor %}
       stemcells:
-      - stemcell/*.tgz
+{% for stemcell_name in stemcells %}
+      - stemcell-{{ stemcell_name }}/*.tgz
+{% endfor %}

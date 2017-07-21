@@ -17,6 +17,16 @@ Once boshifier get the request, It create a pipeline to said concourse target wh
 * Get stemcells from bosh.io
 * Deploy releases to bosh target provided
 
+# Features
+* Deploy release code from any git repo
+    * Pull release code from git repo, Create release tarball, and deploy it to provided director
+* Deploy bosh release
+    * Download bosh release from bosh.io and deploy to provided director
+* Deploy multi-release, multi-stemcell manifests
+
+
+Note: Please refer [Configuration Reference](examples/deployment.yml)
+
 # How to Use
 
 ## Install the requirements
@@ -102,18 +112,12 @@ Deployment done
 ![Sample Pipeline](images/pipeline.png)
 
 # TODO
-* multi-release, multi-stemcell deployments
-* Way to add bosh directors
-* Way to add concourse targets
-    May be user to provide bosh director and concourse creds during deployments
 * Way to set cloud-config and runtime-config
 * Stemcells map to resolve cpi specific stemcell name from os and get cpi details from bosh director
 * To support more complex pipeline for bosh releases like dev build -> test -> push to prod/master branch -> test -> deploy
-* Support releases from bosh.io (without creating it)
 
 # Sample configs
 
 * [Bosh credentials](examples/bosh.yml)
 * [concourse credentials](examples/concourse.yml)
 * [Deployment configuration](examples/deployment.yml)
-

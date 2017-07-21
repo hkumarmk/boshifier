@@ -82,28 +82,6 @@ def get_director_creds(creds_file):
     return dir_creds
 
 
-def get_deployment_config(file):
-    deployment_config = {}
-    config = read_yaml(file)
-    deployment_config.update({
-        'deployment': config['name'],
-        'bosh_release_repo': config['release']['repo'],
-        'boshio_release': config['release'].get('boshio_release'),
-        'release_tarball': config['release'].get('release_tarball'),
-        'stemcell': config['stemcell'],
-        'deployment_manifest_repo': config['manifest']['repo'],
-        'deployment_manifest_path': config['manifest']['path']})
-    if 'branch' in config['release']:
-        deployment_config.update({
-            'bosh_release_branch': config['release']['branch']})
-
-    if 'branch' in config['manifest']:
-        deployment_config.update({
-            'deployment_manifest_branch': config['manifest']['branch']})
-
-    return deployment_config
-
-
 def get_vars(director_name, **kwargs):
     variables = get_director_creds(director_name)
     variables.update(kwargs)
@@ -114,10 +92,10 @@ class Flyer(object):
 
     FLY_CMD = 'fly'
 
-    def __init__(self, cred_file, pipeline, temp_dir, deployment_config):
+    def __init__(self, cred_file, temp_dir, deployment_config):
         self.creds = self._get_concourse_creds(cred_file)
         self.target = self.creds['name']
-        self.pipeline = pipeline
+        self.pipeline = deployment_config['name']
         self.varfile_path = os.path.join(temp_dir, 'vars.yml')
         self.pipeline_config = os.path.join(temp_dir, '.pipeline.yml')
         pipeline_cfg_dict = render_j2(
@@ -139,7 +117,6 @@ class Flyer(object):
         cc_creds = read_yaml(creds_file)
         if not cc_creds:
             return False
-
         if cc_creds.get('ca_cert'):
             cc_ca_cert = literal_str(cc_creds['ca_cert'])
             cc_creds['ca_cert'] = cc_ca_cert
@@ -186,18 +163,18 @@ class Flyer(object):
         return proc.returncode
 
 
-def deploy_to_bosh(bosh_creds, concourse_creds, deplyment_config_file):
-    variables = get_director_creds(bosh_creds)
-    deployment_config = get_deployment_config(deplyment_config_file)
-    deployment_name = deployment_config['deployment']
-    variables.update(deployment_config)
-    temp = tempfile.mkdtemp()
-    varfile_path = os.path.join(temp, 'vars.yml')
+def deploy_to_bosh(bosh_creds_file, concourse_creds_file, deplyment_config_file):
+    variables = get_director_creds(bosh_creds_file)
+    deployment_config = read_yaml(deplyment_config_file)
+    deployment_name = deployment_config['name']
+    variables.update({'deployment_name': deployment_config['name']})
+    temp_dir = tempfile.mkdtemp()
+    varfile_path = os.path.join(temp_dir, 'vars.yml')
     try:
         with open(varfile_path, 'w') as varfile:
             yaml.dump(variables, varfile)
 
-        fly = Flyer(concourse_creds, deployment_name, temp, deployment_config)
+        fly = Flyer(concourse_creds_file, temp_dir, deployment_config)
         rc = fly.login()
         if rc != 0:
             return "Login to concourse failed", 500
@@ -209,7 +186,7 @@ def deploy_to_bosh(bosh_creds, concourse_creds, deplyment_config_file):
             return "Unpause pipeline failed for {}".format(
                 deployment_name), 500
     finally:
-        shutil.rmtree(temp)
+        shutil.rmtree(temp_dir)
     return 'Deployment done', 200
 
 
@@ -260,79 +237,5 @@ if __name__ == '__main__':
         sys.exit(1)
 
 """
-## Sample bosh_creds_file
-director_ca_cert: |
-    -----BEGIN CERTIFICATE-----
-    MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
-    BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
-    aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
-    MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
-    bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
-    ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
-    D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
-    +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
-    y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
-    pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
-    XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
-    PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
-    urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
-    A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
-    BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
-    oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
-    jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
-    pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
-    b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
-    yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
-    -----END CERTIFICATE-----
-director_address: 192.168.50.4
-director_username: admin
-director_password: admin
-
-#### bosh_creds_file end
-
-## Sample concourse_creds file
-
-url: http://localhost:8080
-team: main
-insecure: false
-username: admin
-password: admin
-ca_cert: |
-    -----BEGIN CERTIFICATE-----
-    MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
-    BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
-    aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
-    MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
-    bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
-    ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
-    D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
-    +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
-    y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
-    pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
-    XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
-    PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
-    urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
-    A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
-    BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
-    oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
-    jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
-    pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
-    b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
-    yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
-    -----END CERTIFICATE-----
-
-####### Concourse creds files end
-
-## Sample deployment-config-file
-
-name: redis
-release:
-    repo: "https://github.com/hkumarmk/redis-boshrelease.git"
-    branch: master
-# deployment manifest repo. Default to release_repo
-manifest:
-  repo: "https://github.com/hkumarmk/redis-boshrelease.git"
-  # Path to deployment manifest within manifest repo default to manifest.yml
-  path: manifests/redis.yml
-stemcell: bosh-warden-boshlite-ubuntu-trusty-go_agent
+Sample files found under examples directory
 """
