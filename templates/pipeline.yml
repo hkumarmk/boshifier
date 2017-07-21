@@ -1,0 +1,66 @@
+---
+resources:
+- name: bosh-deployment
+  type: bosh-deployment
+  source:
+    ca_cert: ((director_ca_cert))
+    target: ((director_address))
+    client: ((director_username))
+    client_secret: ((director_password))
+    deployment: ((deployment))
+
+- name: bosh-release-get
+  type: git
+  source:
+    uri: ((bosh_release_repo))
+    branch: &bosh_release_branch master
+
+- name: stemcell
+  type: bosh-io-stemcell
+  source:
+    name: ((stemcell))
+
+- name: bosh-deployment-manifest
+  type: git
+  source:
+    uri: ((deployment_manifest_repo))
+    branch: &deployment_manifest_branch master
+    paths: ((deployment_manifest_path))
+
+resource_types:
+- name: bosh-deployment
+  type: docker-image
+  source:
+    repository: cloudfoundry/bosh-deployment-resource
+
+jobs:
+- name: deploy
+  plan:
+  - aggregate:
+    - get: bosh-release-get
+    - get: stemcell
+    - get: bosh-deployment-manifest
+  - task: create-release
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: &bosh-cli-image-repo hkumar/bosh-cli-v2
+      inputs:
+      - name: bosh-release-get
+      - name: bosh-deployment-manifest
+      run:
+        path: bosh
+        args: [create-release, --final, --tarball=../releases/release.tgz]
+        dir: bosh-release-get
+      outputs:
+      - name: releases
+        path: ""
+  - put: bosh-deployment
+    params:
+      manifest: "bosh-release-get/((deployment_manifest_path))"
+      releases:
+      - releases/*.tgz
+      stemcells:
+      - stemcell/*.tgz
