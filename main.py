@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import yaml
 import tempfile
+import sys
 
 from flask import Flask, request, Response
 
@@ -145,7 +146,7 @@ class Flyer(object):
             fly_login_cmd += ['--ca-cert', self.creds['ca_cert']]
     
         proc = self._fly_cmd(*fly_login_cmd)
-        print(proc.communicate())
+        proc.communicate()
         return proc.returncode
 
     def set_pipeline(self, varfile):
@@ -156,7 +157,7 @@ class Flyer(object):
                       '--config', self.PIPELINE_CONFIG,
                       '--load-vars-from', varfile]
         proc = self._fly_cmd(*fly_sp_cmd)
-        print(proc.communicate())
+        proc.communicate()
         return proc.returncode
 
     def unpause_pipeline(self):
@@ -164,7 +165,7 @@ class Flyer(object):
                       '--target', self.target,
                       '--pipeline', self.pipeline]
         proc = self._fly_cmd(*fly_up_cmd)
-        print(proc.communicate())
+        proc.communicate()
         return proc.returncode
 
 
@@ -182,20 +183,36 @@ def deploy_to_bosh(bosh_creds, concourse_creds, deplyment_config_file):
         fly = Flyer(concourse_creds, deployment_name)
         rc = fly.login()
         if rc != 0:
-            print("Login to concourse failed")
-            return False
+            return "Login to concourse failed", 500
         rc = fly.set_pipeline(varfile_path)
         if rc != 0:
-            print("Set pipeline failed for {}".format(deployment_name))
-            return False
+            return "Set pipeline failed for {}".format(deployment_name), 500
         rc = fly.unpause_pipeline()
         if rc != 0:
-            print("Unpause pipeline failed for {}".format(deployment_name))
-            return False
+             return "Unpause pipeline failed for {}".format(deployment_name), 500
     finally:
         shutil.rmtree(temp)
-    return True
+    return 'Deployment done', 200
 
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'GET':
+        return Response(open('README.md', 'r'), mimetype='text/plain')
+
+    if 'bosh' not in request.files:
+        return 'You must pass a bosh credentials yaml file', 400
+    bosh_creds_file = request.files['bosh']
+
+    if 'concourse' not in request.files:
+        return 'You must pass a concourse credentials yaml file', 400
+    concourse_creds_file = request.files['concourse']
+
+    if 'deployment' not in request.files:
+        return 'You must pass a deployment configuration yaml file', 400
+    deployment_config_file = request.files['deployment']
+
+    return deploy_to_bosh(bosh_creds_file, concourse_creds_file, deployment_config_file)
 
 if __name__ == '__main__':
     import argparse
@@ -211,10 +228,15 @@ if __name__ == '__main__':
                     help="Yaml file that contain deployment configurations")
     args = ap.parse_args()
 
-    pipeline = deploy_to_bosh(args.bosh_creds_file,
+    message, rv = deploy_to_bosh(args.bosh_creds_file,
                               args.concourse_creds_file,
                               args.deployment_config_file)
-
+    if rv == 200:
+        print message
+        sys.exit(0)
+    elif rv == 500:
+        print message
+        sys.exit(1)
 
 """
 ## Sample bosh_creds_file
