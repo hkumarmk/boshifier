@@ -1,14 +1,21 @@
-# Application that help continously deploy bosh releases
+# Boshifier: To help continously deploy bosh releases
 
+Here is the basic workflow at this moment
+* User to keep bosh releases and deployment manifests in git repos
+* User to run Boshifier any of the supporting modes (see below) providing the following details
+  * Credentials to target bosh director
+  * Credentials to target concourse
+  * Deployment configuration
+    * Release[s] git repo urls and branch
+    * Bosh deployment manifest repo, branch and path
+    * Stemcell[s]
 
-# TODO
-* multi-release, multi-stemcell deployments
-* Way to add bosh directors
-* Way to add concourse targets
-    May be user to provide bosh director and concourse creds during deployments
-* Way to set cloud-config and runtime-config
-* Stemcells map to resolve cpi specific stemcell name from os and get cpi details from bosh director
+Once boshifier get the request, It create a pipeline to said concourse target which does below stuffs
 
+* Get bosh releases and bosh deployment manifest from provided git repos
+* Create bosh release tar.gz out of release source get from the repos
+* Get stemcells from bosh.io
+* Deploy releases to bosh target provided
 
 # How to Use
 
@@ -89,6 +96,15 @@ $ curl -v -X POST http://127.0.0.1:5000/ -F bosh=@/tmp/bosh.yml -F concourse=@/t
 Deployment done
 
 ```
+
+# TODO
+* multi-release, multi-stemcell deployments
+* Way to add bosh directors
+* Way to add concourse targets
+    May be user to provide bosh director and concourse creds during deployments
+* Way to set cloud-config and runtime-config
+* Stemcells map to resolve cpi specific stemcell name from os and get cpi details from bosh director
+* To support more complex pipeline for bosh releases like dev build -> test -> push to prod/master branch -> test -> deploy
 
 
 # Sample configs
