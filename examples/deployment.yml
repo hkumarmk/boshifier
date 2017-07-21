@@ -7,5 +7,4 @@ manifest:
   repo: "https://github.com/hkumarmk/redis-boshrelease.git"
   # Path to deployment manifest within manifest repo default to manifest.yml
   path: manifests/redis.yml
-stemcells:
-  - bosh-warden-boshlite-ubuntu-trusty-go_agent
+stemcell: bosh-warden-boshlite-ubuntu-trusty-go_agent

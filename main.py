@@ -12,22 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from jinja2 import Environment, FileSystemLoader
-from yaml.representer import SafeRepresenter
-from urlparse import urlparse
 import os
 import shutil
 import subprocess
-import yaml
-import tempfile
 import sys
+import tempfile
+
+from urlparse import urlparse
 
 from flask import Flask, request, Response
+from jinja2 import Environment, FileSystemLoader
+
+import yaml
+
 
 app = Flask(__name__)
 
 
-class literal_str(str): pass
+class literal_str(str):
+    pass
 
 
 def change_style(style, representer):
@@ -37,25 +40,22 @@ def change_style(style, representer):
         return scalar
     return new_representer
 
-represent_literal_str = change_style('|', SafeRepresenter.represent_str)
+
+represent_literal_str = change_style('|', yaml.representer.SafeRepresenter.represent_str)
 yaml.add_representer(literal_str, represent_literal_str)
 
 
-def render_j2(template=os.path.abspath("./templates/pipeline.yml"), append=False, variables=None):
+def render_j2(template=os.path.abspath("./templates/pipeline.yml"), variables=None):
     variables = variables or {}
     variables.update(os.environ)
     template_abs_path = os.path.abspath(template)
     template_dir = os.path.dirname(template_abs_path)
     template_file = os.path.basename(template_abs_path)
     jenv = Environment(loader=FileSystemLoader(template_dir),
-                         trim_blocks=True)
+                       trim_blocks=True)
     template = jenv.get_template(template_file)
     rendered = template.render(**variables)
 
-    if append:
-        mode = 'a'
-    else:
-        mode = 'w'
     print (yaml.load(rendered))
     return rendered
 
@@ -76,7 +76,7 @@ def get_director_creds(creds_file):
 
     if dir_creds.get('director_ca_cert'):
         director_ca_cert = literal_str(dir_creds['director_ca_cert'])
-        dir_creds['director_ca_cert']=director_ca_cert
+        dir_creds['director_ca_cert'] = director_ca_cert
     return dir_creds
 
 
@@ -105,13 +105,18 @@ def get_vars(director_name, **kwargs):
 
 class Flyer(object):
 
-    FLY_CMD='fly'
+    FLY_CMD = 'fly'
     PIPELINE_CONFIG = 'templates/pipeline.yml'
 
-    def __init__(self, cred_file, pipeline):
+    def __init__(self, cred_file, pipeline, temp_dir):
         self.creds = self._get_concourse_creds(cred_file)
         self.target = self.creds['name']
         self.pipeline = pipeline
+        self.varfile_path = os.path.join(temp_dir, 'vars.yml')
+        if self.creds.get('ca_cert'):
+            self.ca_cert_file = os.path.join(temp_dir, 'concourse_ca_cert.crt')
+            with open(self.ca_cert_file, 'w') as f:
+                f.write(self.creds['ca_cert'])
 
     @staticmethod
     def _fly_cmd(*args, **kwargs):
@@ -125,7 +130,7 @@ class Flyer(object):
 
         if cc_creds.get('ca_cert'):
             cc_ca_cert = literal_str(cc_creds['ca_cert'])
-            cc_creds['ca_cert']=cc_ca_cert
+            cc_creds['ca_cert'] = cc_ca_cert
         if 'name' not in cc_creds:
             cc_creds['name'] = urlparse(cc_creds['url']).hostname
         return cc_creds
@@ -143,19 +148,19 @@ class Flyer(object):
         if self.creds.get('team'):
             fly_login_cmd += ['--team-name', self.creds['team']]
         if self.creds.get('ca_cert'):
-            fly_login_cmd += ['--ca-cert', self.creds['ca_cert']]
-    
+            fly_login_cmd += ['--ca-cert', self.ca_cert_file]
+
         proc = self._fly_cmd(*fly_login_cmd)
         proc.communicate()
         return proc.returncode
 
-    def set_pipeline(self, varfile):
+    def set_pipeline(self):
         fly_sp_cmd = ['set-pipeline',
                       '--target', self.target,
                       '--non-interactive',
                       '--pipeline', self.pipeline,
                       '--config', self.PIPELINE_CONFIG,
-                      '--load-vars-from', varfile]
+                      '--load-vars-from', self.varfile_path]
         proc = self._fly_cmd(*fly_sp_cmd)
         proc.communicate()
         return proc.returncode
@@ -180,16 +185,16 @@ def deploy_to_bosh(bosh_creds, concourse_creds, deplyment_config_file):
         with open(varfile_path, 'w') as varfile:
             yaml.dump(variables, varfile)
 
-        fly = Flyer(concourse_creds, deployment_name)
+        fly = Flyer(concourse_creds, deployment_name, temp)
         rc = fly.login()
         if rc != 0:
             return "Login to concourse failed", 500
-        rc = fly.set_pipeline(varfile_path)
+        rc = fly.set_pipeline()
         if rc != 0:
             return "Set pipeline failed for {}".format(deployment_name), 500
         rc = fly.unpause_pipeline()
         if rc != 0:
-             return "Unpause pipeline failed for {}".format(deployment_name), 500
+            return "Unpause pipeline failed for {}".format(deployment_name), 500
     finally:
         shutil.rmtree(temp)
     return 'Deployment done', 200
@@ -214,6 +219,7 @@ def index():
 
     return deploy_to_bosh(bosh_creds_file, concourse_creds_file, deployment_config_file)
 
+
 if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser(description="Manage bosh deployments")
@@ -229,8 +235,8 @@ if __name__ == '__main__':
     args = ap.parse_args()
 
     message, rv = deploy_to_bosh(args.bosh_creds_file,
-                              args.concourse_creds_file,
-                              args.deployment_config_file)
+                                 args.concourse_creds_file,
+                                 args.deployment_config_file)
     if rv == 200:
         print message
         sys.exit(0)
@@ -313,6 +319,5 @@ manifest:
   repo: "https://github.com/hkumarmk/redis-boshrelease.git"
   # Path to deployment manifest within manifest repo default to manifest.yml
   path: manifests/redis.yml
-stemcells:
-  - bosh-warden-boshlite-ubuntu-trusty-go_agent
+stemcell: bosh-warden-boshlite-ubuntu-trusty-go_agent
 """

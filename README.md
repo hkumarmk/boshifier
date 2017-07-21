@@ -105,7 +105,7 @@ Deployment done
 * Way to set cloud-config and runtime-config
 * Stemcells map to resolve cpi specific stemcell name from os and get cpi details from bosh director
 * To support more complex pipeline for bosh releases like dev build -> test -> push to prod/master branch -> test -> deploy
-
+* Support releases from bosh.io (without creating it)
 
 # Sample configs
 
