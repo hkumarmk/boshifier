@@ -1,8 +1,38 @@
 name: redis
+
+# Releases may be sourced two different ways
+# 1. Pull the code from any git repo and create the releases
+#   You have to provide params
+#   repo: git repo url
+#   branch: git branch
+#   Set boshio_release to false - defay
+# 2. Pull the bosh.io release
+#   provide below params
+#   repo: GitHub repository of the release, i.e. username/reponame (under https://bosh.io/d/github.com/username/reponame
+#   release_tarball: true/false - Fetch the release tarball or not
+#   boshio_release: true (Default is false)
+# Example:
+# 1. Pull the code from git repo and create releases
+# release:
+#   repo: "https://github.com/hkumarmk/redis-boshrelease.git"
+#   branch: master
+#
+# 2. Pull bosh.io release
+# release:
+#   repo: concourse/concourse
+#   boshio_release: true
+#
+# 3. Pull a release tarball
+# release:
+#   repo: cloudfoundry-community/redis-boshrelease
+#   release_tarball: true
+#   boshio_release: true
+#
 release:
-    repo: "https://github.com/hkumarmk/redis-boshrelease.git"
-    branch: master
-# deployment manifest repo. Default to release_repo
+  #
+  repo: "https://github.com/hkumarmk/redis-boshrelease.git"
+  branch: master
+# deployment manifest repo.
 manifest:
   repo: "https://github.com/hkumarmk/redis-boshrelease.git"
   # Path to deployment manifest within manifest repo default to manifest.yml

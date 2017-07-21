@@ -8,12 +8,18 @@ resources:
     client: ((director_username))
     client_secret: ((director_password))
     deployment: ((deployment))
-
+{% if boshio_release %}
+- name: bosh-release-get
+  type: bosh-io-release
+  source:
+    repository: ((bosh_release_repo))
+{% else %}
 - name: bosh-release-get
   type: git
   source:
     uri: ((bosh_release_repo))
     branch: &bosh_release_branch master
+{% endif %}
 
 - name: stemcell
   type: bosh-io-stemcell
@@ -25,7 +31,7 @@ resources:
   source:
     uri: ((deployment_manifest_repo))
     branch: &deployment_manifest_branch master
-    paths: ((deployment_manifest_path))
+#    paths: ((deployment_manifest_path))
 
 resource_types:
 - name: bosh-deployment
@@ -38,8 +44,13 @@ jobs:
   plan:
   - aggregate:
     - get: bosh-release-get
+{% if boshio_release and release_tarball %}
+      params:
+        tarball: true
+{% endif %}
     - get: stemcell
     - get: bosh-deployment-manifest
+{% if not boshio_release %}
   - task: create-release
     config:
       platform: linux
@@ -57,9 +68,10 @@ jobs:
       outputs:
       - name: releases
         path: ""
+{% endif %}
   - put: bosh-deployment
     params:
-      manifest: "bosh-release-get/((deployment_manifest_path))"
+      manifest: "bosh-deployment-manifest/((deployment_manifest_path))"
       releases:
       - releases/*.tgz
       stemcells:

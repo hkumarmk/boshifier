@@ -20,11 +20,21 @@ import mock
 import main
 
 
+deployment_config = {
+    'bosh_release_repo': 'concourse/concourse',
+    'deployment_manifest_repo': 'https://github.com/hkumarmk/redis-boshrelease.git',
+    'deployment_manifest_path': 'manifests/redis.yml',
+    'deployment': 'redis',
+    'stemcell': 'bosh-warden-boshlite-ubuntu-trusty-go_agent'
+}
+
+
 class BoshifierTests(unittest.TestCase):
 
     def setUp(self):
         main.app.testing = True
         self.app = main.app.test_client()
+        self.maxDiff = None
 
     def test_get_index(self):
         resp = self.app.get('/')
@@ -71,6 +81,256 @@ class BoshifierTests(unittest.TestCase):
         self.assertEquals(resp.status_code, 400)
         self.assertEquals(resp.data, "You must pass a deployment configuration yaml file")
 
+    def test_render_j2_release_from_git(self):
+        self.assertEqual(
+            main.render_j2(variables=deployment_config),
+            {
+                'resource_types': [{
+                    'source': {
+                        'repository': 'cloudfoundry/bosh-deployment-resource'
+                    },
+                    'type': 'docker-image',
+                    'name': 'bosh-deployment'
+                }],
+                'jobs': [{
+                    'name': '((deployment))-deploy',
+                    'plan': [{
+                        'aggregate': [{
+                            'get': 'bosh-release-get'
+                        }, {
+                            'get': 'stemcell'
+                        }, {
+                            'get': 'bosh-deployment-manifest'
+                        }]
+                    }, {
+                        'task': 'create-release',
+                        'config': {
+                            'platform': 'linux',
+                            'inputs': [{
+                                'name': 'bosh-release-get'
+                            }, {
+                                'name': 'bosh-deployment-manifest'
+                            }],
+                            'run': {
+                                'path': 'bosh',
+                                'args': ['create-release', '--final', '--tarball=../releases/release.tgz'],
+                                'dir': 'bosh-release-get'
+                            },
+                            'outputs': [{
+                                'path': '',
+                                'name': 'releases'
+                            }],
+                            'image_resource': {
+                                'source': {
+                                    'repository': 'hkumar/bosh-cli-v2'
+                                },
+                                'type': 'docker-image'
+                            }
+                        }
+                    }, {
+                        'put': 'bosh-deployment',
+                        'params': {
+                            'stemcells': ['stemcell/*.tgz'],
+                            'releases': ['releases/*.tgz'],
+                            'manifest': 'bosh-deployment-manifest/((deployment_manifest_path))'
+                        }
+                    }]
+                }],
+                'resources': [{
+                    'source': {
+                        'client_secret': '((director_password))',
+                        'client': '((director_username))',
+                        'target': '((director_address))',
+                        'ca_cert': '((director_ca_cert))',
+                        'deployment': '((deployment))'
+                    },
+                    'type': 'bosh-deployment',
+                    'name': 'bosh-deployment'
+                }, {
+                    'source': {
+                        'uri': '((bosh_release_repo))',
+                        'branch': 'master'
+                    },
+                    'type': 'git',
+                    'name': 'bosh-release-get'
+                }, {
+                    'source': {
+                        'name': '((stemcell))'
+                    },
+                    'type': 'bosh-io-stemcell',
+                    'name': 'stemcell'
+                }, {
+                    'source': {
+                        'uri': '((deployment_manifest_repo))',
+                        'branch': 'master'
+                    },
+                    'type': 'git',
+                    'name': 'bosh-deployment-manifest'
+                }]
+            }
+        )
+
+    def test_render_j2_bosh_release(self):
+        deployment_config_bosh = deployment_config.copy()
+        deployment_config_bosh.update({"boshio_release": True})
+
+        self.assertEqual(
+            main.render_j2(variables=deployment_config),
+            {
+                'resource_types': [{
+                    'source': {
+                        'repository': 'cloudfoundry/bosh-deployment-resource'
+                    },
+                    'type': 'docker-image',
+                    'name': 'bosh-deployment'
+                }],
+                'jobs': [{
+                    'name': '((deployment))-deploy',
+                    'plan': [{
+                        'aggregate': [{
+                            'get': 'bosh-release-get'
+                        }, {
+                            'get': 'stemcell'
+                        }, {
+                            'get': 'bosh-deployment-manifest'
+                        }]
+                    }, {
+                        'task': 'create-release',
+                        'config': {
+                            'platform': 'linux',
+                            'inputs': [{
+                                'name': 'bosh-release-get'
+                            }, {
+                                'name': 'bosh-deployment-manifest'
+                            }],
+                            'run': {
+                                'path': 'bosh',
+                                'args': ['create-release', '--final', '--tarball=../releases/release.tgz'],
+                                'dir': 'bosh-release-get'
+                            },
+                            'outputs': [{
+                                'path': '',
+                                'name': 'releases'
+                            }],
+                            'image_resource': {
+                                'source': {
+                                    'repository': 'hkumar/bosh-cli-v2'
+                                },
+                                'type': 'docker-image'
+                            }
+                        }
+                    }, {
+                        'put': 'bosh-deployment',
+                        'params': {
+                            'stemcells': ['stemcell/*.tgz'],
+                            'releases': ['releases/*.tgz'],
+                            'manifest': 'bosh-deployment-manifest/((deployment_manifest_path))'
+                        }
+                    }]
+                }],
+                'resources': [{
+                    'source': {
+                        'client_secret': '((director_password))',
+                        'client': '((director_username))',
+                        'target': '((director_address))',
+                        'ca_cert': '((director_ca_cert))',
+                        'deployment': '((deployment))'
+                    },
+                    'type': 'bosh-deployment',
+                    'name': 'bosh-deployment'
+                }, {
+                    'source': {
+                        'uri': '((bosh_release_repo))',
+                        'branch': 'master'
+                    },
+                    'type': 'git',
+                    'name': 'bosh-release-get'
+                }, {
+                    'source': {
+                        'name': '((stemcell))'
+                    },
+                    'type': 'bosh-io-stemcell',
+                    'name': 'stemcell'
+                }, {
+                    'source': {
+                        'uri': '((deployment_manifest_repo))',
+                        'branch': 'master'
+                    },
+                    'type': 'git',
+                    'name': 'bosh-deployment-manifest'
+                }]
+            }
+        )
+
+    def test_render_j2_bosh_release_tarball(self):
+        deployment_config_tarball = deployment_config.copy()
+        deployment_config_tarball.update({"boshio_release": True, "release_tarball": True})
+
+        self.assertEqual(
+            main.render_j2(variables=deployment_config_tarball),
+            {
+                'resource_types': [{
+                    'source': {
+                        'repository': 'cloudfoundry/bosh-deployment-resource'
+                    },
+                    'type': 'docker-image',
+                    'name': 'bosh-deployment'
+                }],
+                'jobs': [{
+                    'name': '((deployment))-deploy',
+                    'plan': [{
+                        'aggregate': [{
+                            'params': {
+                                'tarball': True
+                            },
+                            'get': 'bosh-release-get'
+                        }, {
+                            'get': 'stemcell'
+                        }, {
+                            'get': 'bosh-deployment-manifest'
+                        }]
+                    }, {
+                        'put': 'bosh-deployment',
+                        'params': {
+                            'stemcells': ['stemcell/*.tgz'],
+                            'releases': ['releases/*.tgz'],
+                            'manifest': 'bosh-deployment-manifest/((deployment_manifest_path))'
+                        }
+                    }]
+                }],
+                'resources': [{
+                    'source': {
+                        'client_secret': '((director_password))',
+                        'client': '((director_username))',
+                        'target': '((director_address))',
+                        'ca_cert': '((director_ca_cert))',
+                        'deployment': '((deployment))'
+                    },
+                    'type': 'bosh-deployment',
+                    'name': 'bosh-deployment'
+                }, {
+                    'source': {
+                        'repository': '((bosh_release_repo))'
+                    },
+                    'type': 'bosh-io-release',
+                    'name': 'bosh-release-get'
+                }, {
+                    'source': {
+                        'name': '((stemcell))'
+                    },
+                    'type': 'bosh-io-stemcell',
+                    'name': 'stemcell'
+                }, {
+                    'source': {
+                        'uri': '((deployment_manifest_repo))',
+                        'branch': 'master'
+                    },
+                    'type': 'git',
+                    'name': 'bosh-deployment-manifest'
+                }]
+            }
+        )
+
     def test_read_yaml(self):
         self.assertEqual(
             main.read_yaml(open(os.path.join(
@@ -96,6 +356,8 @@ class BoshifierTests(unittest.TestCase):
             {
                 "deployment": "test_name",
                 "bosh_release_repo": "release_repo",
+                "boshio_release": None,
+                "release_tarball": None,
                 "stemcell": "bosh-warden-boshlite-ubuntu-trusty-go_agent",
                 "deployment_manifest_repo": "manifest_repo",
                 "deployment_manifest_path": "manifests/test_manifest.yml",
@@ -191,7 +453,7 @@ class FlyerTests(unittest.TestCase):
         self.fly = main.Flyer(
             open(os.path.join(
                 os.path.dirname(__file__), "samples", "concourse.yml"), "r"),
-            'test_pipeline', "/tmp"
+            'test_pipeline', "/tmp", deployment_config
         )
 
     @mock.patch('main.Flyer._fly_cmd')
@@ -215,7 +477,7 @@ class FlyerTests(unittest.TestCase):
             '--target', 'localhost',
             '--non-interactive',
             '--pipeline', 'test_pipeline',
-            '--config', 'templates/pipeline.yml',
+            '--config', '/tmp/.pipeline.yml',
             '--load-vars-from', '/tmp/vars.yml'
         )
 

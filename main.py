@@ -28,6 +28,9 @@ import yaml
 
 app = Flask(__name__)
 
+PIPELINE_CONFIG_TEMPLATE = os.path.join(
+    os.path.dirname(__file__), "templates", "pipeline.yml.j2")
+
 
 class literal_str(str):
     pass
@@ -41,11 +44,12 @@ def change_style(style, representer):
     return new_representer
 
 
-represent_literal_str = change_style('|', yaml.representer.SafeRepresenter.represent_str)
+represent_literal_str = change_style(
+    '|', yaml.representer.SafeRepresenter.represent_str)
 yaml.add_representer(literal_str, represent_literal_str)
 
 
-def render_j2(template=os.path.abspath("./templates/pipeline.yml"), variables=None):
+def render_j2(template=PIPELINE_CONFIG_TEMPLATE, variables=None):
     variables = variables or {}
     variables.update(os.environ)
     template_abs_path = os.path.abspath(template)
@@ -55,9 +59,7 @@ def render_j2(template=os.path.abspath("./templates/pipeline.yml"), variables=No
                        trim_blocks=True)
     template = jenv.get_template(template_file)
     rendered = template.render(**variables)
-
-    print (yaml.load(rendered))
-    return rendered
+    return yaml.load(rendered)
 
 
 def read_yaml(file):
@@ -83,16 +85,21 @@ def get_director_creds(creds_file):
 def get_deployment_config(file):
     deployment_config = {}
     config = read_yaml(file)
-    deployment_config.update({'deployment': config['name'],
-                              'bosh_release_repo': config['release']['repo'],
-                              'stemcell': config['stemcell'],
-                              'deployment_manifest_repo': config['manifest']['repo'],
-                              'deployment_manifest_path': config['manifest']['path']})
+    deployment_config.update({
+        'deployment': config['name'],
+        'bosh_release_repo': config['release']['repo'],
+        'boshio_release': config['release'].get('boshio_release'),
+        'release_tarball': config['release'].get('release_tarball'),
+        'stemcell': config['stemcell'],
+        'deployment_manifest_repo': config['manifest']['repo'],
+        'deployment_manifest_path': config['manifest']['path']})
     if 'branch' in config['release']:
-        deployment_config.update({'bosh_release_branch': config['release']['branch']})
+        deployment_config.update({
+            'bosh_release_branch': config['release']['branch']})
 
     if 'branch' in config['manifest']:
-        deployment_config.update({'deployment_manifest_branch': config['manifest']['branch']})
+        deployment_config.update({
+            'deployment_manifest_branch': config['manifest']['branch']})
 
     return deployment_config
 
@@ -106,13 +113,18 @@ def get_vars(director_name, **kwargs):
 class Flyer(object):
 
     FLY_CMD = 'fly'
-    PIPELINE_CONFIG = 'templates/pipeline.yml'
 
-    def __init__(self, cred_file, pipeline, temp_dir):
+    def __init__(self, cred_file, pipeline, temp_dir, deployment_config):
         self.creds = self._get_concourse_creds(cred_file)
         self.target = self.creds['name']
         self.pipeline = pipeline
         self.varfile_path = os.path.join(temp_dir, 'vars.yml')
+        self.pipeline_config = os.path.join(temp_dir, '.pipeline.yml')
+        pipeline_cfg_dict = render_j2(
+            PIPELINE_CONFIG_TEMPLATE, deployment_config)
+        with open(self.pipeline_config, 'w') as f:
+            yaml.dump(pipeline_cfg_dict, f, default_flow_style=False)
+        subprocess.check_output(['cat', self.pipeline_config])
         if self.creds.get('ca_cert'):
             self.ca_cert_file = os.path.join(temp_dir, 'concourse_ca_cert.crt')
             with open(self.ca_cert_file, 'w') as f:
@@ -159,7 +171,7 @@ class Flyer(object):
                       '--target', self.target,
                       '--non-interactive',
                       '--pipeline', self.pipeline,
-                      '--config', self.PIPELINE_CONFIG,
+                      '--config', self.pipeline_config,
                       '--load-vars-from', self.varfile_path]
         proc = self._fly_cmd(*fly_sp_cmd)
         proc.communicate()
@@ -185,7 +197,7 @@ def deploy_to_bosh(bosh_creds, concourse_creds, deplyment_config_file):
         with open(varfile_path, 'w') as varfile:
             yaml.dump(variables, varfile)
 
-        fly = Flyer(concourse_creds, deployment_name, temp)
+        fly = Flyer(concourse_creds, deployment_name, temp, deployment_config)
         rc = fly.login()
         if rc != 0:
             return "Login to concourse failed", 500
@@ -194,7 +206,8 @@ def deploy_to_bosh(bosh_creds, concourse_creds, deplyment_config_file):
             return "Set pipeline failed for {}".format(deployment_name), 500
         rc = fly.unpause_pipeline()
         if rc != 0:
-            return "Unpause pipeline failed for {}".format(deployment_name), 500
+            return "Unpause pipeline failed for {}".format(
+                deployment_name), 500
     finally:
         shutil.rmtree(temp)
     return 'Deployment done', 200
@@ -217,7 +230,9 @@ def index():
         return 'You must pass a deployment configuration yaml file', 400
     deployment_config_file = request.files['deployment']
 
-    return deploy_to_bosh(bosh_creds_file, concourse_creds_file, deployment_config_file)
+    return deploy_to_bosh(bosh_creds_file,
+                          concourse_creds_file,
+                          deployment_config_file)
 
 
 if __name__ == '__main__':
@@ -226,11 +241,11 @@ if __name__ == '__main__':
     ap.add_argument('-b', '--bosh-creds-file', type=argparse.FileType('r'),
                     required=True,
                     help="Yaml file that contain bosh credentials")
-    ap.add_argument('-c', '--concourse-creds-file', type=argparse.FileType('r'),
-                    required=True,
+    ap.add_argument('-c', '--concourse-creds-file',
+                    type=argparse.FileType('r'), required=True,
                     help="Yaml file that contain concourse credentials")
-    ap.add_argument('-d', '--deployment-config-file', type=argparse.FileType('r'),
-                    required=True,
+    ap.add_argument('-d', '--deployment-config-file',
+                    type=argparse.FileType('r'), required=True,
                     help="Yaml file that contain deployment configurations")
     args = ap.parse_args()
 
