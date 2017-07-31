@@ -32,6 +32,12 @@ PIPELINE_CONFIG_TEMPLATE = os.path.join(
     os.path.dirname(__file__), "templates", "pipeline.yml.j2")
 
 
+rv_message = {
+    'login_failed': 'Concourse login failed',
+    'sp_failed': 'Concourse Set pipeline failed',
+    'up_failed': 'Concourse unpause pipeline failed',
+}
+
 class literal_str(str):
     pass
 
@@ -50,6 +56,12 @@ yaml.add_representer(literal_str, represent_literal_str)
 
 
 def render_j2(template=PIPELINE_CONFIG_TEMPLATE, variables=None):
+    """
+    Render jinja2 yaml template and return dictionary form of the same.
+    :param template: Template path
+    :param variables: Variables to be substituted to the template
+    :return: Dictionary form of resultant yaml
+    """
     variables = variables or {}
     variables.update(os.environ)
     template_abs_path = os.path.abspath(template)
@@ -71,31 +83,43 @@ def read_yaml(file):
     return dict
 
 
-def get_director_creds(creds_file):
-    dir_creds = read_yaml(creds_file)
-    if not dir_creds:
-        return False
+def get_config(config_file):
+    my_config = read_yaml(config_file)
+    if not my_config:
+        return {}
+    if 'bosh' in my_config.keys():
+        bosh_config = my_config.values()[0]
+        for dir, creds in bosh_config.items():
+            if creds.get('director_ca_cert'):
+                director_ca_cert = literal_str(creds['director_ca_cert'])
+                my_config['bosh'][dir]['director_ca_cert'] = director_ca_cert
+    if 'concourse' in my_config.keys():
+        cc_config = my_config.values()[0]
+        for cc, creds in cc_config.items():
+            if creds.get('ca_cert'):
+                cc_ca_cert = literal_str(creds['ca_cert'])
+                my_config['concourse'][cc]['ca_cert'] = cc_ca_cert
+            if 'name' not in creds:
+                my_config['concourse'][cc]['name'] = urlparse(creds['url']).hostname
 
-    if dir_creds.get('director_ca_cert'):
-        director_ca_cert = literal_str(dir_creds['director_ca_cert'])
-        dir_creds['director_ca_cert'] = director_ca_cert
-    return dir_creds
-
-
-def get_vars(director_name, **kwargs):
-    variables = get_director_creds(director_name)
-    variables.update(kwargs)
-    return variables
+    # Write job name variables in deployment config
+    if 'deployments' in my_config.keys():
+        for deployment, deployment_config in my_config['deployments'].items():
+            if 'deploy_job_name' not in my_config['deployments'][deployment].keys():
+                my_config['deployments'][deployment]['deploy_job_name'] = deployment + '-deploy'
+    return my_config
 
 
 class Flyer(object):
 
     FLY_CMD = 'fly'
 
-    def __init__(self, cred_file, temp_dir, deployment_config):
-        self.creds = self._get_concourse_creds(cred_file)
+    def __init__(self, creds, temp_dir, deployment_config, deployment_targets):
+        self.creds = creds
+        self.deployment_config = deployment_config
+        self.deployment_config.update({'targets': deployment_targets})
         self.target = self.creds['name']
-        self.pipeline = deployment_config['name']
+        self.pipeline = deployment_config['deployment_name']
         self.varfile_path = os.path.join(temp_dir, 'vars.yml')
         self.pipeline_config = os.path.join(temp_dir, '.pipeline.yml')
         pipeline_cfg_dict = render_j2(
@@ -111,18 +135,6 @@ class Flyer(object):
     @staticmethod
     def _fly_cmd(*args, **kwargs):
         return subprocess.Popen([Flyer.FLY_CMD] + list(args), **kwargs)
-
-    @staticmethod
-    def _get_concourse_creds(creds_file):
-        cc_creds = read_yaml(creds_file)
-        if not cc_creds:
-            return False
-        if cc_creds.get('ca_cert'):
-            cc_ca_cert = literal_str(cc_creds['ca_cert'])
-            cc_creds['ca_cert'] = cc_ca_cert
-        if 'name' not in cc_creds:
-            cc_creds['name'] = urlparse(cc_creds['url']).hostname
-        return cc_creds
 
     def login(self):
         fly_login_cmd = ['login',
@@ -162,32 +174,101 @@ class Flyer(object):
         proc.communicate()
         return proc.returncode
 
+    def trigger_job(self):
+        fly_tj_cmd = ['trigger-job',
+                      '--target', self.target,
+                      '--watch',
+                      '--job', "{}/{}".format(
+                self.pipeline,
+                self.deployment_config['deploy_job_name']
+            )]
+        proc = self._fly_cmd(*fly_tj_cmd)
+        proc.communicate()
+        return proc.returncode
 
-def deploy_to_bosh(bosh_creds_file, concourse_creds_file, deplyment_config_file):
-    variables = get_director_creds(bosh_creds_file)
-    deployment_config = read_yaml(deplyment_config_file)
-    deployment_name = deployment_config['name']
-    variables.update({'deployment_name': deployment_config['name']})
-    temp_dir = tempfile.mkdtemp()
-    varfile_path = os.path.join(temp_dir, 'vars.yml')
-    try:
-        with open(varfile_path, 'w') as varfile:
-            yaml.dump(variables, varfile)
 
-        fly = Flyer(concourse_creds_file, temp_dir, deployment_config)
-        rc = fly.login()
-        if rc != 0:
-            return "Login to concourse failed", 500
-        rc = fly.set_pipeline()
-        if rc != 0:
-            return "Set pipeline failed for {}".format(deployment_name), 500
-        rc = fly.unpause_pipeline()
-        if rc != 0:
-            return "Unpause pipeline failed for {}".format(
-                deployment_name), 500
-    finally:
-        shutil.rmtree(temp_dir)
-    return 'Deployment done', 200
+class DeploymentProcessor(object):
+    def __init__(self, config_files):
+        self.config_files = config_files
+        self.configs = {}
+        self.cc_target = None
+
+    def set_cc_pipeline(self, deployment_config):
+        temp_dir = tempfile.mkdtemp()
+        varfile_path = os.path.join(temp_dir, 'vars.yml')
+        try:
+            with open(varfile_path, 'w') as varfile:
+                yaml.dump(self.configs['cc_pipeline_vars'], varfile)
+            fly = Flyer(self.configs['concourse'][self.cc_target],
+                        temp_dir, deployment_config, self.configs['targets'])
+            rc = fly.login()
+            if rc != 0:
+                return 'login_failed'
+            rc = fly.set_pipeline()
+            if rc != 0:
+                return 'sp_failed'
+            rc = fly.unpause_pipeline()
+            if rc != 0:
+                return 'up_failed'
+        finally:
+            shutil.rmtree(temp_dir)
+        return 0
+
+    def _subst_creds(self):
+        bosh_names = self.configs['bosh'].keys()
+        cc_names = self.configs['concourse'].keys()
+        self.cc_target = self.configs['concourse_target']
+        unknown_bosh = []
+        unknown_cc = None
+        self.configs['cc_pipeline_vars'] = {}
+        if self.configs['concourse_target'] not in cc_names:
+            unknown_cc = self.configs['concourse_target']
+
+        for reg, reg_config in self.configs['targets'].items():
+            self.configs['cc_pipeline_vars'].update({reg: {}})
+            for stage_config in reg_config['stages']:
+                stage_index = reg_config['stages'].index(stage_config)
+                for stage, stg_cfg in stage_config.items():
+                    if stg_cfg['bosh'] not in bosh_names:
+                        unknown_bosh.append(stg_cfg['bosh'])
+                    else:
+                        #self.configs['targets'][reg]['stages'][stage_index][stage]['bosh'] = {
+                        #    stg_cfg['bosh']: self.configs['bosh'][stg_cfg['bosh']]
+                        #}
+                        self.configs['cc_pipeline_vars'][reg].update({stage: self.configs['bosh'][stg_cfg['bosh']]})
+
+        return unknown_bosh, unknown_cc
+
+    def process(self):
+        msg = ''
+        rv = 200
+        for config_file in self.config_files:
+            cfg = get_config(config_file)
+            for cfg_section in cfg.keys():
+                if cfg_section in self.configs.keys():
+                    self.configs[cfg_section].update(cfg[cfg_section])
+                else:
+                    self.configs.update(cfg)
+    #    print yaml.dump(configs)
+        unknown_bosh, unknown_cc = self._subst_creds()
+        if unknown_bosh:
+            msg += "Unknown bosh %s " % ",".join(unknown_bosh)
+            rv = 400
+        if unknown_cc:
+            msg += "Unknown concourse %s " % unknown_cc
+            rv = 400
+        if unknown_bosh or unknown_cc:
+            msg += "configured in the targets"
+
+        if rv != 200:
+            return msg, rv
+
+        for deployment, deployment_config in self.configs['deployments'].items():
+            if 'deployment_name' not in deployment_config:
+                deployment_config['deployment_name'] = deployment
+            self.set_cc_pipeline(deployment_config)
+
+        return "Deployment done", rv
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -215,24 +296,19 @@ def index():
 if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser(description="Manage bosh deployments")
-    ap.add_argument('-b', '--bosh-creds-file', type=argparse.FileType('r'),
-                    required=True,
-                    help="Yaml file that contain bosh credentials")
-    ap.add_argument('-c', '--concourse-creds-file',
-                    type=argparse.FileType('r'), required=True,
-                    help="Yaml file that contain concourse credentials")
-    ap.add_argument('-d', '--deployment-config-file',
-                    type=argparse.FileType('r'), required=True,
-                    help="Yaml file that contain deployment configurations")
+    ap.add_argument(
+        'config_files', type=argparse.FileType('r'), nargs='+',
+        help="Yaml file[s] that contain bosh and concourse credentials"
+             " and deployment config. One may submit single yaml file which"
+             " contain all configs or can submit multiple yaml files")
     args = ap.parse_args()
 
-    message, rv = deploy_to_bosh(args.bosh_creds_file,
-                                 args.concourse_creds_file,
-                                 args.deployment_config_file)
+    dp = DeploymentProcessor(args.config_files)
+    message, rv = dp.process()
     if rv == 200:
         print message
         sys.exit(0)
-    elif rv == 500:
+    else:
         print message
         sys.exit(1)
 

@@ -112,9 +112,24 @@ Deployment done
 ![Sample Pipeline](images/pipeline.png)
 
 # TODO
-* Way to set cloud-config and runtime-config
 * Stemcells map to resolve cpi specific stemcell name from os and get cpi details from bosh director
 * To support more complex pipeline for bosh releases like dev build -> test -> push to prod/master branch -> test -> deploy
+* Blobstore configurations to populate config/private.yml or use local blobstore in config/final.yml if not there 
+* Define bosh and concourse credentials within boshifier may be as a configuration
+* Users should just provide deployment config  which should have list of target_regions on which it should be released,
+ with default to all regions
+* There should be paas_map (map on target_name:concourse:bosh) that map the entire global paas system map which should
+have the connectivity details, importance, any sequence required (e.g test, stage, prod) etc based out of which the
+deployment would happen.
+* Each target should have pipeline setup like deploy -> test -> declare pass/fail and notify
+* Way to set cloud-config 
+    * Define hardware profiles with set of common names, so that those generic names can be used within bosh deployment
+    manifests to make them cloud agnostic
+* Way to set runtime-config to have something available to all nodes or nodes in specific profiles
+* Notify in case of failure
+    * May be config to whom and/or what to be notified
+
+
 
 # Sample configs
 

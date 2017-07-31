@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from StringIO import StringIO
-import unittest
 import os
-import mock
-import main
+import unittest
 
+import mock
+
+from boshifier import main
 
 deployment_config = {
     "name": "test_name",

@@ -1,13 +1,19 @@
 ---
 resources:
-- name: bosh-deployment
+{% for target, stages in targets.items() %}
+{% for stage_configs in stages['stages'] %}
+{% for stage, stage_config in stage_configs.items() %}
+- name: bd-{{ target }}-{{ stage }}
   type: bosh-deployment
   source:
-    ca_cert: ((director_ca_cert))
-    target: ((director_address))
-    client: ((director_username))
-    client_secret: ((director_password))
-    deployment: ((deployment_name))
+    ca_cert: (({{ target }}.{{ stage }}.director_ca_cert))
+    target: (({{ target }}.{{ stage }}.director_address))
+    client: (({{ target }}.{{ stage }}.director_username))
+    client_secret: (({{ target }}.{{ stage }}.director_password))
+    deployment: {{ deployment_name }}
+{% endfor %}
+{% endfor %}
+{% endfor %}
 {% for release_name, release_config in releases.items() %}
 {% if release_config.get('boshio_release') %}
 
@@ -45,55 +51,83 @@ resource_types:
     repository: cloudfoundry/bosh-deployment-resource
 
 jobs:
-- name: ((deployment_name))-deploy
+{% for target, stages in targets.items() %}
+{% for stage_configs in stages['stages'] %}
+{% set stage_index = stages['stages'].index(stage_configs) %}
+{% for stage, stage_config in stage_configs.items() %}
+- name: deploy-{{ target }}-{{ stage }}
+  serial: true
   plan:
-  - aggregate:
+  - do:
+    - aggregate:
 {% for stemcell_name in stemcells %}
-    - get: stemcell-{{ stemcell_name }}
-    - get: bosh-deployment-manifest
+      - get: stemcell-{{ stemcell_name }}
+      - get: bosh-deployment-manifest
+        trigger: true
+{% if stage_index > 0 %}
+        passed: [deploy-{{ target }}-{{ stages['stages'][stage_index-1].keys()[0] }}]
+{% endif %}
 {% endfor %}
 {% for release_name, release_config in releases.items() %}
-    - get: bosh-release-get-{{ release_name }}
+      - get: bosh-release-get-{{ release_name }}
+        trigger: true
+{% if stage_index > 0 %}
+        passed: [deploy-{{ target }}-{{ stages['stages'][stage_index-1].keys()[0] }}]
+{% endif %}
 {% if release_config.get('params') %}
-      params:
+        params:
 {% for param_name, param_value in release_config['params'].items() %}
-        {{ param_name }}: {{ param_value }}
+          {{ param_name }}: {{ param_value }}
 {% endfor %}
 {% endif %}
 {% endfor %}
-  - aggregate:
+    - aggregate:
 {% for release_name, release_config in releases.items() %}
 {% if not release_config.get('boshio_release') %}
-    - task: create-release-{{ release_name }}
-      config:
-        platform: linux
-        image_resource:
-          type: docker-image
-          source:
-            repository: hkumar/bosh-cli-v2
-        inputs:
-        - name: bosh-release-get-{{ release_name }}
-        run:
-          path: bosh
-          args: [create-release, --final, --tarball=../bosh-release-{{ release_name }}/release.tgz]
-          dir: bosh-release-get-{{ release_name }}
-        outputs:
-        - name: bosh-release-{{ release_name }}
-          path: ""
+      - task: create-release-{{ release_name }}
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: hkumar/bosh-cli-v2
+          inputs:
+          - name: bosh-release-get-{{ release_name }}
+          run:
+            path: bosh
+            args: [create-release, --final, --tarball=../bosh-release-{{ release_name }}/release.tgz]
+            dir: bosh-release-get-{{ release_name }}
+          outputs:
+          - name: bosh-release-{{ release_name }}
+            path: ""
 {% endif %}
 {% endfor %}
-  - put: bosh-deployment
-    params:
-      manifest: "bosh-deployment-manifest/{{ manifest.get('path', 'manifest.yml')}}"
-      releases:
+    - put: bd-{{ target }}-{{ stage }}
+      params:
+        manifest: "bosh-deployment-manifest/{{ manifest.get('path', 'manifest.yml')}}"
+        releases:
 {% for release_name, release_config in releases.items() %}
 {% if release_config.get('boshio_release') %}
-      - bosh-release-get-{{ release_name }}/*.tgz
+        - bosh-release-get-{{ release_name }}/*.tgz
 {% else %}
-      - bosh-release-{{ release_name }}/*.tgz
+        - bosh-release-{{ release_name }}/*.tgz
 {% endif %}
 {% endfor %}
-      stemcells:
+        stemcells:
 {% for stemcell_name in stemcells %}
-      - stemcell-{{ stemcell_name }}/*.tgz
+        - stemcell-{{ stemcell_name }}/*.tgz
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+
+groups:
+{% for target, stages in targets.items() %}
+- name: deploy-{{ target }}
+  jobs:
+{% for stage_configs in stages['stages'] %}
+{% for stage, stage_config in stage_configs.items() %}
+  - deploy-{{ target }}-{{ stage }}
+{% endfor %}
+{% endfor %}
 {% endfor %}
