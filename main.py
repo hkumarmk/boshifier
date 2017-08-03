@@ -31,12 +31,14 @@ app = Flask(__name__)
 PIPELINE_CONFIG_TEMPLATE = os.path.join(
     os.path.dirname(__file__), "templates", "pipeline.yml.j2")
 
+CONFIG_FILE = os.getenv('BOSHIFIER_CONFIG_FILE', '/etc/boshifier/config.yml')
 
 rv_message = {
     'login_failed': 'Concourse login failed',
     'sp_failed': 'Concourse Set pipeline failed',
     'up_failed': 'Concourse unpause pipeline failed',
 }
+
 
 class literal_str(str):
     pass
@@ -189,9 +191,17 @@ class Flyer(object):
 
 class DeploymentProcessor(object):
     def __init__(self, config_files):
+        initial_config = self._get_initial_config_file()
+        if initial_config:
+            config_files.insert(0, initial_config)
         self.config_files = config_files
         self.configs = {}
         self.cc_target = None
+
+    @staticmethod
+    def _get_initial_config_file():
+        if os.path.isfile(CONFIG_FILE):
+            return open(CONFIG_FILE, 'r')
 
     def set_cc_pipeline(self, deployment_config):
         temp_dir = tempfile.mkdtemp()
@@ -249,7 +259,6 @@ class DeploymentProcessor(object):
                     self.configs[cfg_section].update(cfg[cfg_section])
                 else:
                     self.configs.update(cfg)
-    #    print yaml.dump(configs)
         unknown_bosh, unknown_cc = self._subst_creds()
         if unknown_bosh:
             msg += "Unknown bosh %s " % ",".join(unknown_bosh)
