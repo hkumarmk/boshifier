@@ -47,6 +47,10 @@ deployments:
     # Errands should be already deployed.
     tests:
       - sanity-tests
+    # Vars will be passed on to deployment manifests
+    vars:
+      foo: bar
+      bar: baz
 
 targets:
   region_a:

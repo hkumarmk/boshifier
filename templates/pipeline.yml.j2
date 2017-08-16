@@ -124,6 +124,12 @@ jobs:
 {% for stemcell_name in stemcells %}
         - stemcell-{{ stemcell_name }}/*.tgz
 {% endfor %}
+{% if vars %}
+        vars:
+{% for key, val in vars.items() %}
+        - {{ key }}: {{ val }}
+{% endfor %}
+{% endif %}
 {% for test in tests %}
 - name: test-{{ test }}-{{ target }}-{{ stage }}
   serial: true
