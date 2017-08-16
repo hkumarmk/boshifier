@@ -42,6 +42,12 @@ deployments:
       path: manifests/redis.yml
     stemcells:
       - bosh-warden-boshlite-ubuntu-trusty-go_agent
+    # Tests to be run. Currently only support running tests as
+    # bosh errands.
+    # Errands should be already deployed.
+    tests:
+      - sanity-tests
+
 targets:
   region_a:
     stages:

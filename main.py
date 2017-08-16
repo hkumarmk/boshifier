@@ -224,7 +224,7 @@ class DeploymentProcessor(object):
             shutil.rmtree(temp_dir)
         return 0
 
-    def _subst_creds(self):
+    def _subst_vars(self):
         bosh_names = self.configs['bosh'].keys()
         cc_names = self.configs['concourse'].keys()
         self.cc_target = self.configs['concourse_target']
@@ -242,10 +242,8 @@ class DeploymentProcessor(object):
                     if stg_cfg['bosh'] not in bosh_names:
                         unknown_bosh.append(stg_cfg['bosh'])
                     else:
-                        #self.configs['targets'][reg]['stages'][stage_index][stage]['bosh'] = {
-                        #    stg_cfg['bosh']: self.configs['bosh'][stg_cfg['bosh']]
-                        #}
-                        self.configs['cc_pipeline_vars'][reg].update({stage: self.configs['bosh'][stg_cfg['bosh']]})
+                        self.configs['cc_pipeline_vars'][reg].update(
+                            {stage: self.configs['bosh'][stg_cfg['bosh']]})
 
         return unknown_bosh, unknown_cc
 
@@ -259,7 +257,7 @@ class DeploymentProcessor(object):
                     self.configs[cfg_section].update(cfg[cfg_section])
                 else:
                     self.configs.update(cfg)
-        unknown_bosh, unknown_cc = self._subst_creds()
+        unknown_bosh, unknown_cc = self._subst_vars()
         if unknown_bosh:
             msg += "Unknown bosh %s " % ",".join(unknown_bosh)
             rv = 400
@@ -285,21 +283,13 @@ def index():
     if request.method == 'GET':
         return Response(open('README.md', 'r'), mimetype='text/plain')
 
-    if 'bosh' not in request.files:
-        return 'You must pass a bosh credentials yaml file', 400
-    bosh_creds_file = request.files['bosh']
+    config_files = []
+    for files in request.files.iterlistvalues():
+        for fp in files:
+            config_files.append(fp)
 
-    if 'concourse' not in request.files:
-        return 'You must pass a concourse credentials yaml file', 400
-    concourse_creds_file = request.files['concourse']
-
-    if 'deployment' not in request.files:
-        return 'You must pass a deployment configuration yaml file', 400
-    deployment_config_file = request.files['deployment']
-
-    return deploy_to_bosh(bosh_creds_file,
-                          concourse_creds_file,
-                          deployment_config_file)
+    dp = DeploymentProcessor(config_files)
+    return dp.process()
 
 
 if __name__ == '__main__':

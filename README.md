@@ -1,14 +1,17 @@
-# Boshifier: To help continously deploy bosh releases
+# Boshifier: To help continously deploy bosh releases 
+
+Create concourse pipelines based out of the deployment configurations provided. 
 
 Here is the basic workflow at this moment
 * User to keep bosh releases and deployment manifests in git repos
 * User to run Boshifier any of the supporting modes (see below) providing the following details
-  * Credentials to target bosh director
+  * Credentials to target bosh directors
   * Credentials to target concourse
-  * Deployment configuration
+  * Deployment configurations
     * Release[s] git repo urls and branch
     * Bosh deployment manifest repo, branch and path
     * Stemcell[s]
+  * Targets to be deployed with 
 
 Once boshifier get the request, It create a pipeline to said concourse target which does below stuffs
 
@@ -113,23 +116,24 @@ Deployment done
 
 # TODO
 * Stemcells map to resolve cpi specific stemcell name from os and get cpi details from bosh director
-* To support more complex pipeline for bosh releases like dev build -> test -> push to prod/master branch -> test -> deploy
 * Blobstore configurations to populate config/private.yml or use local blobstore in config/final.yml if not there 
-* Define bosh and concourse credentials within boshifier may be as a configuration
 * Users should just provide deployment config  which should have list of target_regions on which it should be released,
  with default to all regions
-* There should be paas_map (map on target_name:concourse:bosh) that map the entire global paas system map which should
-have the connectivity details, importance, any sequence required (e.g test, stage, prod) etc based out of which the
-deployment would happen.
 * Each target should have pipeline setup like deploy -> test -> declare pass/fail and notify
 * Way to set cloud-config 
     * Define hardware profiles with set of common names, so that those generic names can be used within bosh deployment
     manifests to make them cloud agnostic
 * Way to set runtime-config to have something available to all nodes or nodes in specific profiles
-* Notify in case of failure
-    * May be config to whom and/or what to be notified
-
-
+* Notify in case of failure or/and successful deployment
+    * May be config to whom and/or what to be notified and how
+* Create release once and push tar file somewhere centrally so that it can be used in other places. 
+* It may have multiple concourse systems
+* Reduce the logic in jinja2 template
+    - Currently there are lot of logic in the template, which need to be cleaned
+    - we may have python functions that make dictionary to make resultant yaml rather than using jinja2 template
+    - that may make the system more composable
+* capability to support different configs per 
+* Pass variables to bosh release
 
 # Sample configs
 
