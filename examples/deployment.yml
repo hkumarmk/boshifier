@@ -48,22 +48,16 @@ deployments:
     tests:
       - sanity-tests
     # Vars will be passed on to deployment manifests
+    # default vars will be overridden with any target bosh specific variables
+    # target specific variables may be specified under specific bosh name
+    # (i.e bosh_test_reg_a as you see below).
     vars:
-      foo: bar
-      bar: baz
-
-targets:
-  region_a:
-    stages:
-    - test:
-        bosh: bosh_test_reg_a
-    - stage:
-        bosh: bosh_stage_reg_a
-    - prod:
-        bosh: bosh_prod_reg_a
-  region_b:
-    stages:
-      - stage:
-          bosh: bosh_stage_reg_b
-      - prod:
-          bosh: bosh_prod_reg_b
+      default:
+        foo: bar
+        bar: baz
+      bosh_test_reg_a:
+        foo: baz
+        var1: value
+      bosh_stage_reg_a:
+        foo: val
+        var2: val2

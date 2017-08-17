@@ -124,9 +124,9 @@ jobs:
 {% for stemcell_name in stemcells %}
         - stemcell-{{ stemcell_name }}/*.tgz
 {% endfor %}
-{% if vars %}
+{% if stage_config.get('vars') %}
         vars:
-{% for key, val in vars.items() %}
+{% for key, val in stage_config['vars'].items() %}
         - {{ key }}: {{ val }}
 {% endfor %}
 {% endif %}

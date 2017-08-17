@@ -1,0 +1,16 @@
+# Targets may be loaded as configuration to boshifier
+targets:
+  region_a:
+    stages:
+    - test:
+        bosh: bosh_test_reg_a
+    - stage:
+        bosh: bosh_stage_reg_a
+    - prod:
+        bosh: bosh_prod_reg_a
+  region_b:
+    stages:
+      - stage:
+          bosh: bosh_stage_reg_b
+      - prod:
+          bosh: bosh_prod_reg_b

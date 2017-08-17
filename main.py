@@ -20,7 +20,7 @@ import tempfile
 
 from urlparse import urlparse
 
-from flask import Flask, request, Response
+from flask import Flask, request, Response, abort, jsonify
 from jinja2 import Environment, FileSystemLoader
 
 import yaml
@@ -116,10 +116,9 @@ class Flyer(object):
 
     FLY_CMD = 'fly'
 
-    def __init__(self, creds, temp_dir, deployment_config, deployment_targets):
+    def __init__(self, creds, temp_dir, deployment_config):
         self.creds = creds
         self.deployment_config = deployment_config
-        self.deployment_config.update({'targets': deployment_targets})
         self.target = self.creds['name']
         self.pipeline = deployment_config['deployment_name']
         self.varfile_path = os.path.join(temp_dir, 'vars.yml')
@@ -190,13 +189,21 @@ class Flyer(object):
 
 
 class DeploymentProcessor(object):
-    def __init__(self, config_files):
+    def __init__(self, config_files=None):
+        if not config_files:
+            config_files = []
         initial_config = self._get_initial_config_file()
         if initial_config:
             config_files.insert(0, initial_config)
         self.config_files = config_files
-        self.configs = {}
+        self.configs = self._load_config()
         self.cc_target = None
+
+    def targets(self):
+        if self.configs.get('targets'):
+            return jsonify(self.configs['targets'])
+        else:
+            abort(404, "No targets exist")
 
     @staticmethod
     def _get_initial_config_file():
@@ -210,7 +217,7 @@ class DeploymentProcessor(object):
             with open(varfile_path, 'w') as varfile:
                 yaml.dump(self.configs['cc_pipeline_vars'], varfile)
             fly = Flyer(self.configs['concourse'][self.cc_target],
-                        temp_dir, deployment_config, self.configs['targets'])
+                        temp_dir, deployment_config)
             rc = fly.login()
             if rc != 0:
                 return 'login_failed'
@@ -224,7 +231,22 @@ class DeploymentProcessor(object):
             shutil.rmtree(temp_dir)
         return 0
 
-    def _subst_vars(self):
+    def _subst_vars(self, variables):
+        """Merge vars with targets and return"""
+        targets = self.configs['targets'].copy()
+        for reg, reg_config in targets.items():
+            for stage_config in reg_config['stages']:
+                for stage, stg_cfg in stage_config.items():
+                    bosh_name = stg_cfg.get('bosh')
+                    vars_ = variables.get('default', {}).copy()
+                    vars_.update(variables.get(bosh_name, {}))
+                    if not stg_cfg.get('vars'):
+                        stg_cfg.update({'vars': vars_})
+                    else:
+                        stg_cfg['vars'].update(vars_)
+        return targets
+
+    def _subst_creds(self):
         bosh_names = self.configs['bosh'].keys()
         cc_names = self.configs['concourse'].keys()
         self.cc_target = self.configs['concourse_target']
@@ -247,17 +269,21 @@ class DeploymentProcessor(object):
 
         return unknown_bosh, unknown_cc
 
-    def process(self):
-        msg = ''
-        rv = 200
+    def _load_config(self):
+        configs = {}
         for config_file in self.config_files:
             cfg = get_config(config_file)
             for cfg_section in cfg.keys():
-                if cfg_section in self.configs.keys():
-                    self.configs[cfg_section].update(cfg[cfg_section])
+                if cfg_section in configs.keys():
+                    configs[cfg_section].update(cfg[cfg_section])
                 else:
-                    self.configs.update(cfg)
-        unknown_bosh, unknown_cc = self._subst_vars()
+                    configs.update(cfg)
+        return configs
+
+    def process(self):
+        msg = ''
+        rv = 200
+        unknown_bosh, unknown_cc = self._subst_creds()
         if unknown_bosh:
             msg += "Unknown bosh %s " % ",".join(unknown_bosh)
             rv = 400
@@ -273,6 +299,9 @@ class DeploymentProcessor(object):
         for deployment, deployment_config in self.configs['deployments'].items():
             if 'deployment_name' not in deployment_config:
                 deployment_config['deployment_name'] = deployment
+            if deployment_config.get('vars'):
+                subst_targets = self._subst_vars(deployment_config['vars'])
+                deployment_config.update({'targets': subst_targets})
             self.set_cc_pipeline(deployment_config)
 
         return "Deployment done", rv
@@ -292,25 +321,35 @@ def index():
     return dp.process()
 
 
+@app.route('/targets', methods=['GET'])
+def targets():
+    dp = DeploymentProcessor()
+    return dp.targets()
+
 if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser(description="Manage bosh deployments")
     ap.add_argument(
-        'config_files', type=argparse.FileType('r'), nargs='+',
+        'config_files', type=argparse.FileType('r'), nargs='*',
         help="Yaml file[s] that contain bosh and concourse credentials"
              " and deployment config. One may submit single yaml file which"
              " contain all configs or can submit multiple yaml files")
+    ap.add_argument('-c', '--command', action='store_true', help="Run boshifier as commandline tool")
     args = ap.parse_args()
 
-    dp = DeploymentProcessor(args.config_files)
-    message, rv = dp.process()
-    if rv == 200:
-        print message
-        sys.exit(0)
+    if args.command:
+        dp = DeploymentProcessor(args.config_files)
+        message, rv = dp.process()
+        if rv == 200:
+            print message
+            sys.exit(0)
+        else:
+            print message
+            sys.exit(1)
     else:
-        print message
-        sys.exit(1)
-
+        app.run(debug=True,
+                host=os.getenv("BOSHIFIER_LISTEN_ADDR", "127.0.0.1"),
+                port=int(os.getenv("BOSHIFIER_LISTEN_PORT", "5000")))
 """
 Sample files found under examples directory
 """

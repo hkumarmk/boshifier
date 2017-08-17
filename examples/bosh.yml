@@ -1,3 +1,4 @@
+# bosh credentials may be loaded as configuration to boshifier
 bosh:
   bosh_stage_reg_a:
     director_ca_cert: |
