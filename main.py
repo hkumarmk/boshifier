@@ -20,7 +20,7 @@ import tempfile
 
 from urlparse import urlparse
 
-from flask import Flask, request, Response, abort, jsonify
+from flask import abort, Flask, jsonify, request, Response
 from jinja2 import Environment, FileSystemLoader
 
 import yaml
@@ -109,6 +109,7 @@ def get_config(config_file):
         for deployment, deployment_config in my_config['deployments'].items():
             if 'deploy_job_name' not in my_config['deployments'][deployment].keys():
                 my_config['deployments'][deployment]['deploy_job_name'] = deployment + '-deploy'
+
     return my_config
 
 
@@ -179,10 +180,9 @@ class Flyer(object):
         fly_tj_cmd = ['trigger-job',
                       '--target', self.target,
                       '--watch',
-                      '--job', "{}/{}".format(
-                self.pipeline,
-                self.deployment_config['deploy_job_name']
-            )]
+                      '--job', "{}/{}".format(self.pipeline,
+                                              self.deployment_config[
+                                                  'deploy_job_name'])]
         proc = self._fly_cmd(*fly_tj_cmd)
         proc.communicate()
         return proc.returncode
@@ -201,9 +201,10 @@ class DeploymentProcessor(object):
 
     def targets(self):
         if self.configs.get('targets'):
+            print jsonify(self.configs['targets'])
             return jsonify(self.configs['targets'])
         else:
-            abort(404, "No targets exist")
+            abort(404, "No targets found")
 
     @staticmethod
     def _get_initial_config_file():
@@ -259,7 +260,6 @@ class DeploymentProcessor(object):
         for reg, reg_config in self.configs['targets'].items():
             self.configs['cc_pipeline_vars'].update({reg: {}})
             for stage_config in reg_config['stages']:
-                stage_index = reg_config['stages'].index(stage_config)
                 for stage, stg_cfg in stage_config.items():
                     if stg_cfg['bosh'] not in bosh_names:
                         unknown_bosh.append(stg_cfg['bosh'])
@@ -302,15 +302,24 @@ class DeploymentProcessor(object):
             if deployment_config.get('vars'):
                 subst_targets = self._subst_vars(deployment_config['vars'])
                 deployment_config.update({'targets': subst_targets})
-            self.set_cc_pipeline(deployment_config)
-
-        return "Deployment done", rv
+            rv = self.set_cc_pipeline(deployment_config)
+            if rv == "login_failed":
+                return "Login to concourse failed", 500
+            elif rv == "sp_failed":
+                return "Set pipeline failed", 500
+            elif rv == "up_failed":
+                return "Unpause pipeline failed", 500
+            else:
+                return "Deployment done", 200
 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'GET':
         return Response(open('README.md', 'r'), mimetype='text/plain')
+
+    if not request.files:
+        abort(400, "You must pass deployment config yaml file")
 
     config_files = []
     for files in request.files.iterlistvalues():
@@ -325,6 +334,7 @@ def index():
 def targets():
     dp = DeploymentProcessor()
     return dp.targets()
+
 
 if __name__ == '__main__':
     import argparse
