@@ -1,3 +1,4 @@
+---
 # Targets may be loaded as configuration to boshifier
 targets:
   region_a:

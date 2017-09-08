@@ -1,3 +1,4 @@
+---
 # Concourse credentials may be loaded as configuration to boshifier
 concourse:
   cc1:

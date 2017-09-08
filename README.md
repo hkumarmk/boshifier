@@ -26,7 +26,7 @@ Once boshifier get the request, It create a pipeline to said concourse target wh
 * Deploy bosh release
     * Download bosh release from bosh.io and deploy to provided director
 * Deploy multi-release, multi-stemcell manifests
-
+* Deploy to multiple environments with different stages in each environment.
 
 Note: Please refer [Configuration Reference](examples/deployment.yml)
 
@@ -39,6 +39,12 @@ $ pip install requirements.txt
 ```
 
 ## Start boshifier in debug mode
+Boshifier may be initialized with all required configurations loaded. All the bosh/concourse credentials
+and target definitions may be good candidates for configurations. Such configurations need to be added
+to the file /etc/boshifier/config.yml file. Please refer [example configurations](examples/)
+
+NOTE: The configuration file can be changed by setting an environment variable BOSHIFIER_CONFIG_FILE which
+point to a configuration file path.
 
 ```
 $ cd boshifier
@@ -49,9 +55,9 @@ $ python main.py
  * Debugger PIN: 937-515-728
 ```
 
-## Use curl to deploy a deployment
+## Use curl to do a deployment
 ```
-$ curl -v -X POST http://127.0.0.1:5000/ -F f=@examples/deployment.yml -F f=@examples/targets.yml
+$ curl -v -X POST http://127.0.0.1:5000/ -F f=@examples/deployment.yml
 * Hostname was NOT found in DNS cache
 *   Trying 127.0.0.1...
 * Connected to 127.0.0.1 (127.0.0.1) port 5000 (#0)

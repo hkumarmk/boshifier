@@ -1,3 +1,4 @@
+---
 concourse_target: cc1
 deployments:
   redis:
