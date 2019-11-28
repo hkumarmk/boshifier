@@ -1,0 +1,16 @@
+name: pipe
+resource_types:
+- name: artifactory
+  type: docker-image
+  source:
+    repository: pivotalservices/artifactory-resource
+
+resources:
+- name: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+  type: bosh-io-stemcell
+  source:
+    name: bosh-warden-boshlite-ubuntu-trusty-go_agent
+jobs:
+  - name: build-and-save-to-artifactory
+    plan:
+    - get: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent

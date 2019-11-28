@@ -16,18 +16,42 @@ resources:
 {% endfor %}
 {% for release_name, release_config in releases.items() %}
 {% if release_config.get('boshio_release') %}
-
 - name: bosh-release-get-{{ release_name }}
   type: bosh-io-release
   source:
     repository: {{ release_config['repo'] }}
 {% else %}
+- name: version-{{ release_name }}
+  type: semver
+  source:
+    driver: git
+    uri: {{ bosh_release_versions.get(repo, release_config['repo']) }}
+    branch: {{ bosh_release_versions.get(branch, release_config['branch']) | default('master') }}
+    file: {{ release_name }}_version
+{% if bosh_release_versions.get(repo_private_key, release_config.get('repo_private_key')) %}
+    private_key: |
+      {{ bosh_release_versions.get(repo_private_key, release_config.get('repo_private_key')) |indent(6)}}
+{% elif bosh_release_versions.get(repo_username, release_config.get('repo_username')) %}
+    username: {{ bosh_release_versions.get(repo_username, release_config.get('repo_username')) }}
+{% if bosh_release_versions.get(repo_password, release_config.get('repo_password')) %}
+    password: {{ bosh_release_versions.get(repo_password, release_config.get('repo_password')) }}
+{% endif %}
+{% endif %}
 - name: bosh-release-get-{{ release_name }}
   type: git
   source:
     uri: {{ release_config['repo'] }}
     branch: {{ release_config.get('branch', 'master') }}
 
+- name: {{ release_name }}-artifactory
+  type: artifactory
+  source:
+    endpoint: {{ artifactory.url }}
+    repository: "/{{ artifactory.repo |default('bosh-releases') }}/{{ release_name }}"
+    regex: "{{ release_name }}-boshrelease-(?<version>.*).tgz"
+    username: {{ artifactory.user }}
+    password: {{ artifactory.password }}
+    skip_ssl_verification: {{ not artifactory.ssl_verify | default(True) }}
 {% endif %}
 {% endfor %}
 
@@ -50,7 +74,61 @@ resource_types:
   source:
     repository: cloudfoundry/bosh-deployment-resource
 
+- name: artifactory
+  type: docker-image
+  source:
+    repository: pivotalservices/artifactory-resource
+
 jobs:
+{% for release_name, release_config in releases.items() %}
+- name: build-release-{{ release_name }}
+  plan:
+  - do:
+    - aggregate:
+      - get: bosh-release-get-{{ release_name }}
+        trigger: true
+{% if release_config.get('params') %}
+        params:
+{% for param_name, param_value in release_config['params'].items() %}
+          {{ param_name }}: {{ param_value }}
+{% endfor %}
+{% endif %}
+{% if not release_config.get('boshio_release') %}
+      - get: version-{{ release_name }}
+        params:
+          bump: {{ release_config.version_bump | default('patch') }}
+    - do:
+      - task: create-release-{{ release_name }}
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: hkumar/bosh-cli-v2
+          inputs:
+          - name: bosh-release-get-{{ release_name }}
+          - name: version-{{ release_name }}
+          run:
+            path: bash
+            args:
+            - -c
+            - |
+              set -e
+              version=$(cat ../version-{{ release_name }}/version)
+              bosh create-release --final \
+                --tarball=../bosh-release-{{ release_name }}/{{ release_name }}-boshrelease-${version}.tgz \
+                --version=$version
+            dir: bosh-release-get-{{ release_name }}
+          outputs:
+          - name: bosh-release-{{ release_name }}
+            path: ""
+      - put: {{ release_name }}-artifactory
+        params:
+          file: bosh-release-{{ release_name }}/{{ release_name }}-boshrelease-*.tgz
+      - put: version-{{ release_name }}
+        params: {file: version-{{ release_name }}/version}
+{% endif %}
+{% endfor %}
 {% for target, stages in targets.items() %}
 {% for stage_configs in stages['stages'] %}
 {% set stage_index = stages['stages'].index(stage_configs) %}
@@ -63,6 +141,19 @@ jobs:
 {% for stemcell_name in stemcells %}
       - get: stemcell-{{ stemcell_name }}
 {% endfor %}
+
+{% for release_name, release_config in releases.items() %}
+{% if release_config.get('boshio_release') %}
+      - get: bosh-release-get-{{ release_name }}
+{% else %}
+      - get: {{ release_name }}-artifactory
+{% endif %}
+        trigger: true
+{% if stage_index > 0 %}
+        passed: [deploy-{{ target }}-{{ stages['stages'][stage_index-1].keys()[0] }}]
+{% endif %}
+{% endfor %}
+
       - get: bosh-deployment-manifest
         trigger: true
 {% if stage_index > 0 %}
@@ -75,40 +166,6 @@ jobs:
         - deploy-{{ target }}-{{ stages['stages'][stage_index-1].keys()[0] }}
 {% endif %}
 {% endif %}
-{% for release_name, release_config in releases.items() %}
-      - get: bosh-release-get-{{ release_name }}
-        trigger: true
-{% if stage_index > 0 %}
-        passed: [deploy-{{ target }}-{{ stages['stages'][stage_index-1].keys()[0] }}]
-{% endif %}
-{% if release_config.get('params') %}
-        params:
-{% for param_name, param_value in release_config['params'].items() %}
-          {{ param_name }}: {{ param_value }}
-{% endfor %}
-{% endif %}
-{% endfor %}
-    - aggregate:
-{% for release_name, release_config in releases.items() %}
-{% if not release_config.get('boshio_release') %}
-      - task: create-release-{{ release_name }}
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source:
-              repository: hkumar/bosh-cli-v2
-          inputs:
-          - name: bosh-release-get-{{ release_name }}
-          run:
-            path: bosh
-            args: [create-release, --final, --tarball=../bosh-release-{{ release_name }}/release.tgz]
-            dir: bosh-release-get-{{ release_name }}
-          outputs:
-          - name: bosh-release-{{ release_name }}
-            path: ""
-{% endif %}
-{% endfor %}
     - put: bd-{{ target }}-{{ stage }}
       params:
         manifest: "bosh-deployment-manifest/{{ manifest.get('path', 'manifest.yml')}}"
@@ -117,7 +174,7 @@ jobs:
 {% if release_config.get('boshio_release') %}
         - bosh-release-get-{{ release_name }}/*.tgz
 {% else %}
-        - bosh-release-{{ release_name }}/*.tgz
+        - {{ release_name }}-artifactory/*.tgz
 {% endif %}
 {% endfor %}
         stemcells:
@@ -127,7 +184,7 @@ jobs:
 {% if stage_config.get('vars') %}
         vars:
 {% for key, val in stage_config['vars'].items() %}
-        - {{ key }}: {{ val }}
+          {{ key }}: {{ val }}
 {% endfor %}
 {% endif %}
 {% for test in tests %}
@@ -165,6 +222,13 @@ jobs:
 {% endfor %}
 
 groups:
+- name: build_releases
+  jobs:
+{% for release_name, release_config in releases.items() %}
+{% if not release_config.get('boshio_release') %}
+  - build-release-{{ release_name }}
+{% endif %}
+{% endfor %}
 {% for target, stages in targets.items() %}
 - name: deploy-{{ target }}
   jobs:

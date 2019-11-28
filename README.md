@@ -160,7 +160,7 @@ $ python main.py -c examples/deployment.yml
     - Currently there are lot of logic in the template, which need to be cleaned
     - we may have python functions that make dictionary to make resultant yaml rather than using jinja2 template
     - that may make the system more composable
-
+* Set a deploy_trigger_policy - to set if deployment to be triggered if all release builds are succeeded or otherwise
 
 # Sample configs
 

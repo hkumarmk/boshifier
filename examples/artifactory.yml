@@ -1,0 +1,36 @@
+---
+artifactory:
+  url: http://172.17.42.1:8081/artifactory
+  #repo: repo1 # Optional. Default: bosh-releases
+  user: harish
+  password: harish
+bosh_release_versions:
+  repo: git@github.com:hkumarmk/boshrelease-versions.git
+  repo_private_key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEpQIBAAKCAQEAuiuYT/96ui990pPEjm1m0NME58rNhGmryFghmUXic3ZLO9lF
+    V0ZW/KyqBgUBPNTvSvZbsJRYsgI0CE9azAL/6vTS3Hts5FKSAOEie1HINVmXM0fj
+    Y8FmVoDZV6Q5sE8SBPmYmo3TGEMID5o/SOoaXgugW8LsCw5YsGAoGYjPsgA95vvI
+    iVmSfhTrZEnTliDiVHfX5zPYMB7/9iok5gdG32Fxez+wCewGM5FGHwf//G2j8DSd
+    c2AsQLePgqFPi8FS4x4RLCKJc+Xa1Qcsa1yPbmtVBts66CqlAlpTwp3yhfeYTm11
+    KysQbr9zj894ycjkv7em8YJ5ZSPgtKYRJKrNtwIDAQABAoIBAGvWmNGuAR8cJ1v0
+    8GQ4Bthrg2no1Ycf1rukIUIxcuzC1u2B+2KEghq2wX3fJEpiZYIclhwAsifakt1F
+    aijGjAtDaWkBrZ/MHHqZ7mlUhA4zKRwxRgwgmPD+jebwX+I6ywtKsRTFlkN1gJPZ
+    G1NXF5LmVSsSC7yTwNfZuyCfWP+Xmq7Q6wyTz79yYl8hqP2cg+aBkneV8IPTa3jF
+    2WE/0zlgcjCw17fJP2nklQzgcTUtMwVQVrlbRF280zNJD8ZfKPA4tSDlzxiIbXmV
+    SZen5sbKXit+zmuwFBdp38m5ZO+05Z0payelutb4Ik1iFKy+V6edjdlrZ1ufp5he
+    ghWDXBECgYEA6sE9xzHPVeMk7RAvmGccPwbFHtFYaA+I1BMjOdCdNftR02M+mIGr
+    SHWL68G6nxR0w6KfO9sk/biv7TK4vvaQmkdMvYajiA92gw4EZFtOudGCtCgqFDbF
+    88pVvjjGT97UKVkLR785cdNgBQ22CsAjgtO2xGlUMp+6T5xjVtx6s+sCgYEAywTB
+    Wdkh5dVxpZmFThWH25558uyOhR1q5VWJpf61EKBidWwace64zzNRoUwRrwo2nn7l
+    nbxq1XSPTwO+oEI5c7T1zOmLypQB5Pl5hzJQm0ND5zFjhQFh429bIv6eqT2drBhx
+    dM1UJ07k2gf74QmIATgaeUINcYS/f7I3TQya9mUCgYEAsQJUmsYsGA7V4Qq7WKcm
+    3T81ky83Af/0pDRp80YhxHpkEIhcwpHDnTdE8dd56El8YadVecSb99QykyATvaod
+    DreEXcQPuqAuNFN1bFaM3f/kFgPS9rr2OATw8iXNIpxaTXMe1lKR9gnz9NuJ0EFg
+    hV0uCpuBKUrXKQA6x1woCVECgYEAkU9qBSFA/fx0R49Gtsj6YNthddqTd/vCUzuS
+    NlnEx43Eaz9g/kNbzBJzTvvffGXXCkLRnsEJxpaTLH8FpjdAX+0aMfzHrcuaP4XA
+    0l/VCgxvQb87+CsxIVTG6plMft43SMKGEpAUt73kV5p3Um88BYNej4QTkzjsyD2L
+    D38CO3ECgYEAo6vboae6yhwa/ZGbR3iz2d+vr1Qx40DQbRKbpUx25B7EjYdVwXue
+    RPW9neIbtE6SeG3QMxxky0DeoD497w5BkKJXkzzmn9kwZHwXti93Px2rACXf21hA
+    6fuRmJZ3/dwEJMCfdUHTOZCHH27o8+Qn/+j+krpdo4sLqoNBCLVZ8rk=
+    -----END RSA PRIVATE KEY-----

@@ -33,14 +33,21 @@ deployments:
     #
     #
     releases:
-      redis:
-        repo: "https://github.com/hkumarmk/redis-boshrelease.git"
-        branch: master
+      #redis:
+        #repo: "https://github.com/hkumarmk/redis-boshrelease.git"
+        #repo: cloudfoundry-community/redis-boshrelease
+        #boshio_release: true
+      glbproxy:
+        repo: "https://github.com/hkumarmk/glbproxy-boshrelease.git"
+        #branch: master
+        #boshio_release: true
     # deployment manifest repo.
     manifest:
-      repo: "https://github.com/hkumarmk/redis-boshrelease.git"
+#      repo: "https://github.com/hkumarmk/redis-boshrelease.git"
+      repo: "https://github.com/hkumarmk/glbproxy-boshrelease.git"
       # Path to deployment manifest within manifest repo default to manifest.yml
-      path: manifests/redis.yml
+      path: manifests/glbproxy.yml
+      #path: manifests/redis.yml
     stemcells:
       - bosh-warden-boshlite-ubuntu-trusty-go_agent
     # Tests to be run. Currently only support running tests as
@@ -56,6 +63,7 @@ deployments:
       default:
         foo: bar
         bar: baz
+        redis-password: redis
       bosh_test_reg_a:
         foo: baz
         var1: value

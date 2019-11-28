@@ -104,7 +104,6 @@ def get_config(config_file):
             if 'name' not in creds:
                 my_config['concourse'][cc]['name'] = urlparse(creds['url']).hostname
 
-    # Write job name variables in deployment config
     if 'deployments' in my_config.keys():
         for deployment, deployment_config in my_config['deployments'].items():
             if 'deploy_job_name' not in my_config['deployments'][deployment].keys():
@@ -302,6 +301,14 @@ class DeploymentProcessor(object):
             if deployment_config.get('vars'):
                 subst_targets = self._subst_vars(deployment_config['vars'])
                 deployment_config.update({'targets': subst_targets})
+            else:
+                deployment_config.update({'targets': self.configs['targets']})
+            if self.configs.get('artifactory'):
+                deployment_config.update({'artifactory': self.configs['artifactory']})
+            if self.configs.get('bosh_release_versions'):
+                deployment_config.update({'bosh_release_versions': self.configs['bosh_release_versions']})
+            else:
+                deployment_config.update({'bosh_release_versions': {}})
             rv = self.set_cc_pipeline(deployment_config)
             if rv == "login_failed":
                 return "Login to concourse failed", 500

@@ -1,0 +1,44 @@
+name: pipe
+resource_types:
+- name: artifactory
+  type: docker-image
+  source:
+    repository: pivotalservices/artifactory-resource
+
+resources:
+- name: myapp-repository
+  type: artifactory
+  source:
+    endpoint: http://172.17.42.1:8081/artifactory
+    repository: "/generic-local/myapp"
+    regex: "myapp-(?<version>.*).tar.gz"
+    username: harish
+    password: harish
+    skip_ssl_verification: true
+- name: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+  type: bosh-io-stemcell
+  source:
+    name: bosh-warden-boshlite-ubuntu-trusty-go_agent
+jobs:
+  - name: build-and-save-to-artifactory
+    plan:
+    - get: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+    - task: build-a-file
+      config:
+        platform: linux
+        image_resource:
+          type: docker-image
+          source:
+            repository: ubuntu
+        outputs:
+        - name: build
+        run:
+          path: sh
+          args:
+          - -exc
+          - |
+            export DATESTRING=$(date +"%Y%m%d")
+            echo "This is my file" > ./build/myapp-$(date +"%Y%m%d%H%S").tar.gz
+            find .
+    - put: myapp-repository
+      params: { file: ./build/myapp-*.tar.gz}

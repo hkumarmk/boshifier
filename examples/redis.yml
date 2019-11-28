@@ -1,0 +1,660 @@
+groups:
+- name: deploy-region_a
+  jobs:
+  - deploy-region_a-test
+  - test-sanity-tests-region_a-test
+  - deploy-region_a-stage
+  - test-sanity-tests-region_a-stage
+  - deploy-region_a-prod
+  - test-sanity-tests-region_a-prod
+- name: deploy-region_b
+  jobs:
+  - deploy-region_b-stage
+  - test-sanity-tests-region_b-stage
+  - deploy-region_b-prod
+  - test-sanity-tests-region_b-prod
+resources:
+- name: bd-region_a-test
+  type: bosh-deployment
+  source:
+    ca_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+      BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+      aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+      MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+      bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+      ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+      D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+      +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+      y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+      pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+      XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+      PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+      urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+      A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+      BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+      oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+      jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+      pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+      b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+      yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+      -----END CERTIFICATE-----
+    client: admin
+    client_secret: admin
+    deployment: redis
+    target: 192.168.50.4
+- name: bd-region_a-stage
+  type: bosh-deployment
+  source:
+    ca_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+      BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+      aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+      MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+      bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+      ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+      D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+      +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+      y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+      pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+      XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+      PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+      urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+      A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+      BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+      oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+      jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+      pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+      b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+      yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+      -----END CERTIFICATE-----
+    client: admin
+    client_secret: admin
+    deployment: redis
+    target: 192.168.50.4
+- name: bd-region_a-prod
+  type: bosh-deployment
+  source:
+    ca_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+      BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+      aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+      MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+      bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+      ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+      D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+      +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+      y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+      pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+      XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+      PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+      urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+      A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+      BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+      oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+      jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+      pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+      b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+      yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+      -----END CERTIFICATE-----
+    client: admin
+    client_secret: admin
+    deployment: redis
+    target: 192.168.50.4
+- name: bd-region_b-stage
+  type: bosh-deployment
+  source:
+    ca_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+      BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+      aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+      MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+      bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+      ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+      D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+      +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+      y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+      pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+      XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+      PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+      urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+      A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+      BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+      oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+      jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+      pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+      b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+      yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+      -----END CERTIFICATE-----
+    client: admin
+    client_secret: admin
+    deployment: redis
+    target: 192.168.50.4
+- name: bd-region_b-prod
+  type: bosh-deployment
+  source:
+    ca_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+      BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+      aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+      MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+      bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+      ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+      D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+      +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+      y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+      pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+      XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+      PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+      urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+      A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+      BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+      oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+      jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+      pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+      b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+      yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+      -----END CERTIFICATE-----
+    client: admin
+    client_secret: admin
+    deployment: redis
+    target: 192.168.50.4
+- name: bosh-release-get-redis
+  type: git
+  source:
+    branch: master
+    uri: https://github.com/hkumarmk/redis-boshrelease.git
+- name: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+  type: bosh-io-stemcell
+  source:
+    name: bosh-warden-boshlite-ubuntu-trusty-go_agent
+- name: bosh-deployment-manifest
+  type: git
+  source:
+    branch: master
+    uri: https://github.com/hkumarmk/redis-boshrelease.git
+resource_types:
+- name: bosh-deployment
+  type: docker-image
+  source:
+    repository: cloudfoundry/bosh-deployment-resource
+jobs:
+- name: deploy-region_a-test
+  serial: true
+  plan:
+  - do:
+    - aggregate:
+      - get: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+      - get: bosh-deployment-manifest
+        trigger: true
+      - get: bosh-release-get-redis
+        trigger: true
+    - aggregate:
+      - task: create-release-redis
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: hkumar/bosh-cli-v2
+          run:
+            path: bosh
+            args:
+            - create-release
+            - --final
+            - --tarball=../bosh-release-redis/release.tgz
+            dir: bosh-release-get-redis
+          inputs:
+          - name: bosh-release-get-redis
+            path: ""
+          outputs:
+          - name: bosh-release-redis
+            path: ""
+    - put: bd-region_a-test
+      params:
+        manifest: bosh-deployment-manifest/manifests/redis.yml
+        releases:
+        - bosh-release-redis/*.tgz
+        stemcells:
+        - stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz
+        vars:
+        - var1: value
+        - foo: baz
+        - bar: baz
+- name: test-sanity-tests-region_a-test
+  serial: true
+  plan:
+  - get: bosh-deployment-manifest
+    passed:
+    - deploy-region_a-test
+    trigger: true
+  - task: sanity-tests
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: hkumar/bosh-cli-v2
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -e
+          tmp=$(mktemp)
+          echo "-----BEGIN CERTIFICATE-----
+          MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+          MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+          bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+          ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+          D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+          +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+          y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+          pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+          XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+          PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+          urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+          A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+          BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+          oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+          jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+          pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+          b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+          yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+          -----END CERTIFICATE-----
+          " > $tmp
+          bosh -e 192.168.50.4 \
+            --ca-cert $tmp \
+            --client admin \
+            --client-secret admin \
+            -d redis run-errand sanity-tests
+          rm -f $tmp
+        dir: ""
+- name: deploy-region_a-stage
+  serial: true
+  plan:
+  - do:
+    - aggregate:
+      - get: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+      - get: bosh-deployment-manifest
+        passed:
+        - test-sanity-tests-region_a-test
+        trigger: true
+      - get: bosh-release-get-redis
+        passed:
+        - deploy-region_a-test
+        trigger: true
+    - aggregate:
+      - task: create-release-redis
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: hkumar/bosh-cli-v2
+          run:
+            path: bosh
+            args:
+            - create-release
+            - --final
+            - --tarball=../bosh-release-redis/release.tgz
+            dir: bosh-release-get-redis
+          inputs:
+          - name: bosh-release-get-redis
+            path: ""
+          outputs:
+          - name: bosh-release-redis
+            path: ""
+    - put: bd-region_a-stage
+      params:
+        manifest: bosh-deployment-manifest/manifests/redis.yml
+        releases:
+        - bosh-release-redis/*.tgz
+        stemcells:
+        - stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz
+        vars:
+        - foo: val
+        - bar: baz
+        - var2: val2
+- name: test-sanity-tests-region_a-stage
+  serial: true
+  plan:
+  - get: bosh-deployment-manifest
+    passed:
+    - deploy-region_a-stage
+    trigger: true
+  - task: sanity-tests
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: hkumar/bosh-cli-v2
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -e
+          tmp=$(mktemp)
+          echo "-----BEGIN CERTIFICATE-----
+          MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+          MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+          bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+          ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+          D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+          +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+          y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+          pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+          XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+          PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+          urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+          A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+          BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+          oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+          jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+          pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+          b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+          yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+          -----END CERTIFICATE-----
+          " > $tmp
+          bosh -e 192.168.50.4 \
+            --ca-cert $tmp \
+            --client admin \
+            --client-secret admin \
+            -d redis run-errand sanity-tests
+          rm -f $tmp
+        dir: ""
+- name: deploy-region_a-prod
+  serial: true
+  plan:
+  - do:
+    - aggregate:
+      - get: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+      - get: bosh-deployment-manifest
+        passed:
+        - test-sanity-tests-region_a-stage
+        trigger: true
+      - get: bosh-release-get-redis
+        passed:
+        - deploy-region_a-stage
+        trigger: true
+    - aggregate:
+      - task: create-release-redis
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: hkumar/bosh-cli-v2
+          run:
+            path: bosh
+            args:
+            - create-release
+            - --final
+            - --tarball=../bosh-release-redis/release.tgz
+            dir: bosh-release-get-redis
+          inputs:
+          - name: bosh-release-get-redis
+            path: ""
+          outputs:
+          - name: bosh-release-redis
+            path: ""
+    - put: bd-region_a-prod
+      params:
+        manifest: bosh-deployment-manifest/manifests/redis.yml
+        releases:
+        - bosh-release-redis/*.tgz
+        stemcells:
+        - stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz
+        vars:
+        - foo: bar
+        - bar: baz
+- name: test-sanity-tests-region_a-prod
+  serial: true
+  plan:
+  - get: bosh-deployment-manifest
+    passed:
+    - deploy-region_a-prod
+    trigger: true
+  - task: sanity-tests
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: hkumar/bosh-cli-v2
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -e
+          tmp=$(mktemp)
+          echo "-----BEGIN CERTIFICATE-----
+          MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+          MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+          bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+          ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+          D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+          +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+          y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+          pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+          XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+          PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+          urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+          A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+          BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+          oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+          jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+          pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+          b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+          yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+          -----END CERTIFICATE-----
+          " > $tmp
+          bosh -e 192.168.50.4 \
+            --ca-cert $tmp \
+            --client admin \
+            --client-secret admin \
+            -d redis run-errand sanity-tests
+          rm -f $tmp
+        dir: ""
+- name: deploy-region_b-stage
+  serial: true
+  plan:
+  - do:
+    - aggregate:
+      - get: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+      - get: bosh-deployment-manifest
+        trigger: true
+      - get: bosh-release-get-redis
+        trigger: true
+    - aggregate:
+      - task: create-release-redis
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: hkumar/bosh-cli-v2
+          run:
+            path: bosh
+            args:
+            - create-release
+            - --final
+            - --tarball=../bosh-release-redis/release.tgz
+            dir: bosh-release-get-redis
+          inputs:
+          - name: bosh-release-get-redis
+            path: ""
+          outputs:
+          - name: bosh-release-redis
+            path: ""
+    - put: bd-region_b-stage
+      params:
+        manifest: bosh-deployment-manifest/manifests/redis.yml
+        releases:
+        - bosh-release-redis/*.tgz
+        stemcells:
+        - stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz
+        vars:
+        - foo: bar
+        - bar: baz
+- name: test-sanity-tests-region_b-stage
+  serial: true
+  plan:
+  - get: bosh-deployment-manifest
+    passed:
+    - deploy-region_b-stage
+    trigger: true
+  - task: sanity-tests
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: hkumar/bosh-cli-v2
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -e
+          tmp=$(mktemp)
+          echo "-----BEGIN CERTIFICATE-----
+          MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+          MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+          bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+          ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+          D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+          +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+          y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+          pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+          XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+          PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+          urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+          A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+          BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+          oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+          jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+          pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+          b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+          yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+          -----END CERTIFICATE-----
+          " > $tmp
+          bosh -e 192.168.50.4 \
+            --ca-cert $tmp \
+            --client admin \
+            --client-secret admin \
+            -d redis run-errand sanity-tests
+          rm -f $tmp
+        dir: ""
+- name: deploy-region_b-prod
+  serial: true
+  plan:
+  - do:
+    - aggregate:
+      - get: stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent
+      - get: bosh-deployment-manifest
+        passed:
+        - test-sanity-tests-region_b-stage
+        trigger: true
+      - get: bosh-release-get-redis
+        passed:
+        - deploy-region_b-stage
+        trigger: true
+    - aggregate:
+      - task: create-release-redis
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: hkumar/bosh-cli-v2
+          run:
+            path: bosh
+            args:
+            - create-release
+            - --final
+            - --tarball=../bosh-release-redis/release.tgz
+            dir: bosh-release-get-redis
+          inputs:
+          - name: bosh-release-get-redis
+            path: ""
+          outputs:
+          - name: bosh-release-redis
+            path: ""
+    - put: bd-region_b-prod
+      params:
+        manifest: bosh-deployment-manifest/manifests/redis.yml
+        releases:
+        - bosh-release-redis/*.tgz
+        stemcells:
+        - stemcell-bosh-warden-boshlite-ubuntu-trusty-go_agent/*.tgz
+        vars:
+        - foo: bar
+        - bar: baz
+- name: test-sanity-tests-region_b-prod
+  serial: true
+  plan:
+  - get: bosh-deployment-manifest
+    passed:
+    - deploy-region_b-prod
+    trigger: true
+  - task: sanity-tests
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: hkumar/bosh-cli-v2
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -e
+          tmp=$(mktemp)
+          echo "-----BEGIN CERTIFICATE-----
+          MIIDtzCCAp+gAwIBAgIJAMZ/qRdRamluMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwIBcNMTYwODI2MjIzMzE5WhgPMjI5MDA2MTAyMjMzMTla
+          MEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIEwpTb21lLVN0YXRlMSEwHwYDVQQKExhJ
+          bnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
+          ggEKAoIBAQDN/bv70wDn6APMqiJZV7ESZhUyGu8OzuaeEfb+64SNvQIIME0s9+i7
+          D9gKAZjtoC2Tr9bJBqsKdVhREd/X6ePTaopxL8shC9GxXmTqJ1+vKT6UxN4kHr3U
+          +Y+LK2SGYUAvE44nv7sBbiLxDl580P00ouYTf6RJgW6gOuKpIGcvsTGA4+u0UTc+
+          y4pj6sT0+e3xj//Y4wbLdeJ6cfcNTU63jiHpKc9Rgo4Tcy97WeEryXWz93rtRh8d
+          pvQKHVDU/26EkNsPSsn9AHNgaa+iOA2glZ2EzZ8xoaMPrHgQhcxoi8maFzfM2dX2
+          XB1BOswa/46yqfzc4xAwaW0MLZLg3NffAgMBAAGjgacwgaQwHQYDVR0OBBYEFNRJ
+          PYFebixALIR2Ee+yFoSqurxqMHUGA1UdIwRuMGyAFNRJPYFebixALIR2Ee+yFoSq
+          urxqoUmkRzBFMQswCQYDVQQGEwJBVTETMBEGA1UECBMKU29tZS1TdGF0ZTEhMB8G
+          A1UEChMYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkggkAxn+pF1FqaW4wDAYDVR0T
+          BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOCAQEAoPTwU2rm0ca5b8xMni3vpjYmB9NW
+          oSpGcWENbvu/p7NpiPAe143c5EPCuEHue/AbHWWxBzNAZvhVZBeFirYNB3HYnCla
+          jP4WI3o2Q0MpGy3kMYigEYG76WeZAM5ovl0qDP6fKuikZofeiygb8lPs7Hv4/88x
+          pSsZYBm7UPTS3Pl044oZfRJdqTpyHVPDqwiYD5KQcI0yHUE9v5KC0CnqOrU/83PE
+          b0lpHA8bE9gQTQjmIa8MIpaP3UNTxvmKfEQnk5UAZ5xY2at5mmyj3t8woGdzoL98
+          yDd2GtrGsguQXM2op+4LqEdHef57g7vwolZejJqN776Xu/lZtCTp01+HTA==
+          -----END CERTIFICATE-----
+          " > $tmp
+          bosh -e 192.168.50.4 \
+            --ca-cert $tmp \
+            --client admin \
+            --client-secret admin \
+            -d redis run-errand sanity-tests
+          rm -f $tmp
+        dir: ""

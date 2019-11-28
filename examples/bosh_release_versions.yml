@@ -1,0 +1,7 @@
+# Optional bosh_release versions repo. This is required if you want to keep release versions
+bosh_release_versions:
+  #
+  repo: git@github.com:hkumarmk/boshrelease-versions.git
+  #repo_private_key: < ssh private key >
+  repo_username: hkumarmk
+  repo_password: password
